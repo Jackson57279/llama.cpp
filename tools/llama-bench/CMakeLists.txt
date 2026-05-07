@@ -1,8 +1,23 @@
 set(TARGET llama-bench)
-add_executable(${TARGET} llama-bench.cpp)
-target_link_libraries(${TARGET} PRIVATE llama-common llama ${CMAKE_THREAD_LIBS_INIT})
-target_compile_features(${TARGET} PRIVATE cxx_std_17)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+
+set(LLAMA_BENCH_RUST_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/../llama-bench-rust/Cargo.toml)
+set(LLAMA_BENCH_RUST_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/llama-bench)
+set(LLAMA_BENCH_RUST_BIN ${LLAMA_BENCH_RUST_TARGET_DIR}/debug/llama-bench${CMAKE_EXECUTABLE_SUFFIX})
+set(LLAMA_BENCH_RUST_OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+
+add_custom_command(
+    OUTPUT ${LLAMA_BENCH_RUST_OUTPUT}
+    COMMAND ${CMAKE_COMMAND} -E env LLAMA_CPP_LIB_DIR=$<TARGET_FILE_DIR:llama>
+            ${CARGO_EXECUTABLE} build --manifest-path ${LLAMA_BENCH_RUST_MANIFEST} --target-dir ${LLAMA_BENCH_RUST_TARGET_DIR} --bin llama-bench
+    COMMAND ${CMAKE_COMMAND} -E copy ${LLAMA_BENCH_RUST_BIN} ${LLAMA_BENCH_RUST_OUTPUT}
+    DEPENDS
+        ${LLAMA_BENCH_RUST_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../llama-bench-rust/src/main.rs
+)
+
+add_custom_target(${TARGET} ALL DEPENDS ${LLAMA_BENCH_RUST_OUTPUT})
 
 if(LLAMA_TOOLS_INSTALL)
-    install(TARGETS ${TARGET} RUNTIME)
+    install(PROGRAMS ${LLAMA_BENCH_RUST_OUTPUT} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()

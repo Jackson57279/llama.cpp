@@ -1,0 +1,9 @@
+[package]
+name = "llama-fit-params-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "llama-fit-params"
+path = "src/main.rs"

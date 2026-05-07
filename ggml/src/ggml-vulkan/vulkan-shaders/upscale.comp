@@ -17,7 +17,7 @@ layout(local_size_x = 512, local_size_y = 1, local_size_z = 1) in;
 layout (binding = 0) readonly buffer A {A_TYPE data_a[];};
 layout (binding = 1) writeonly buffer D {D_TYPE data_d[];};
 
-// from ggml.h: enum ggml_scale_mode, enum ggml_scale_flag
+// from ggml.h.inc: enum ggml_scale_mode, enum ggml_scale_flag
 #define NEAREST  0
 #define BILINEAR 1
 #define BICUBIC  2

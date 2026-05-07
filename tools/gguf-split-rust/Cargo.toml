@@ -1,0 +1,12 @@
+[package]
+name = "llama-gguf-split-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+llama-simple-rust = { path = "../../examples/simple-rust" }
+
+[[bin]]
+name = "llama-gguf-split"
+path = "src/main.rs"

@@ -57,29 +57,29 @@ endif()
 
 message(STATUS "HIP and hipBLAS found")
 
-file(GLOB   GGML_HEADERS_ROCM "../ggml-cuda/*.cuh")
-list(APPEND GGML_HEADERS_ROCM "../../include/ggml-cuda.h")
+file(GLOB   GGML_HEADERS_ROCM "../ggml-cuda/*.cuh.inc")
+list(APPEND GGML_HEADERS_ROCM "../../include/ggml-cuda.h.inc")
 
-file(GLOB   GGML_SOURCES_ROCM "../ggml-cuda/*.cu")
-file(GLOB   SRCS "../ggml-cuda/template-instances/fattn-tile*.cu")
+file(GLOB   GGML_SOURCES_ROCM "../ggml-cuda/*.cu.inc")
+file(GLOB   SRCS "../ggml-cuda/template-instances/fattn-tile*.cu.inc")
 list(APPEND GGML_SOURCES_ROCM ${SRCS})
-file(GLOB   SRCS "../ggml-cuda/template-instances/fattn-mma*.cu")
+file(GLOB   SRCS "../ggml-cuda/template-instances/fattn-mma*.cu.inc")
 list(APPEND GGML_SOURCES_ROCM ${SRCS})
-file(GLOB   SRCS "../ggml-cuda/template-instances/mmq*.cu")
+file(GLOB   SRCS "../ggml-cuda/template-instances/mmq*.cu.inc")
 list(APPEND GGML_SOURCES_ROCM ${SRCS})
-file(GLOB   SRCS "../ggml-cuda/template-instances/mmf*.cu")
+file(GLOB   SRCS "../ggml-cuda/template-instances/mmf*.cu.inc")
 list(APPEND GGML_SOURCES_ROCM ${SRCS})
 
 if (GGML_CUDA_FA_ALL_QUANTS)
-    file(GLOB   SRCS "../ggml-cuda/template-instances/fattn-vec*.cu")
+    file(GLOB   SRCS "../ggml-cuda/template-instances/fattn-vec*.cu.inc")
     list(APPEND GGML_SOURCES_ROCM ${SRCS})
     add_compile_definitions(GGML_CUDA_FA_ALL_QUANTS)
 else()
     list(APPEND GGML_SOURCES_ROCM
-        ../ggml-cuda/template-instances/fattn-vec-instance-f16-f16.cu
-        ../ggml-cuda/template-instances/fattn-vec-instance-q4_0-q4_0.cu
-        ../ggml-cuda/template-instances/fattn-vec-instance-q8_0-q8_0.cu
-        ../ggml-cuda/template-instances/fattn-vec-instance-bf16-bf16.cu)
+        ../ggml-cuda/template-instances/fattn-vec-instance-f16-f16.cu.inc
+        ../ggml-cuda/template-instances/fattn-vec-instance-q4_0-q4_0.cu.inc
+        ../ggml-cuda/template-instances/fattn-vec-instance-q8_0-q8_0.cu.inc
+        ../ggml-cuda/template-instances/fattn-vec-instance-bf16-bf16.cu.inc)
 endif()
 
 ggml_add_backend_library(ggml-hip

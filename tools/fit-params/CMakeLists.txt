@@ -1,8 +1,22 @@
 set(TARGET llama-fit-params)
-add_executable(${TARGET} fit-params.cpp)
-target_link_libraries(${TARGET} PRIVATE llama-common llama ${CMAKE_THREAD_LIBS_INIT})
-target_compile_features(${TARGET} PRIVATE cxx_std_17)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+
+set(FIT_PARAMS_RUST_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/../fit-params-rust/Cargo.toml)
+set(FIT_PARAMS_RUST_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/fit-params)
+set(FIT_PARAMS_RUST_BIN ${FIT_PARAMS_RUST_TARGET_DIR}/debug/llama-fit-params${CMAKE_EXECUTABLE_SUFFIX})
+set(FIT_PARAMS_RUST_OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+
+add_custom_command(
+    OUTPUT ${FIT_PARAMS_RUST_OUTPUT}
+    COMMAND ${CARGO_EXECUTABLE} build --manifest-path ${FIT_PARAMS_RUST_MANIFEST} --target-dir ${FIT_PARAMS_RUST_TARGET_DIR} --bin llama-fit-params
+    COMMAND ${CMAKE_COMMAND} -E copy ${FIT_PARAMS_RUST_BIN} ${FIT_PARAMS_RUST_OUTPUT}
+    DEPENDS
+        ${FIT_PARAMS_RUST_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../fit-params-rust/src/main.rs
+)
+
+add_custom_target(${TARGET} ALL DEPENDS ${FIT_PARAMS_RUST_OUTPUT})
 
 if(LLAMA_TOOLS_INSTALL)
-    install(TARGETS ${TARGET} RUNTIME)
+    install(PROGRAMS ${FIT_PARAMS_RUST_OUTPUT} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()

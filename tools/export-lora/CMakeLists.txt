@@ -1,8 +1,20 @@
 set(TARGET llama-export-lora)
-add_executable(${TARGET} export-lora.cpp)
-target_link_libraries(${TARGET} PRIVATE llama-common llama ${CMAKE_THREAD_LIBS_INIT})
-target_compile_features(${TARGET} PRIVATE cxx_std_17)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+set(EXPORT_LORA_RUST_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/../export-lora-rust/Cargo.toml)
+set(EXPORT_LORA_RUST_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/export-lora)
+set(EXPORT_LORA_RUST_BIN ${EXPORT_LORA_RUST_TARGET_DIR}/debug/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+set(EXPORT_LORA_RUST_OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+
+add_custom_command(
+    OUTPUT ${EXPORT_LORA_RUST_OUTPUT}
+    COMMAND ${CARGO_EXECUTABLE} build --manifest-path ${EXPORT_LORA_RUST_MANIFEST} --target-dir ${EXPORT_LORA_RUST_TARGET_DIR} --bin ${TARGET}
+    COMMAND ${CMAKE_COMMAND} -E copy ${EXPORT_LORA_RUST_BIN} ${EXPORT_LORA_RUST_OUTPUT}
+    DEPENDS
+        ${EXPORT_LORA_RUST_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../export-lora-rust/src/main.rs
+)
+add_custom_target(${TARGET} ALL DEPENDS ${EXPORT_LORA_RUST_OUTPUT})
 
 if(LLAMA_TOOLS_INSTALL)
-    install(TARGETS ${TARGET} RUNTIME)
+    install(PROGRAMS ${EXPORT_LORA_RUST_OUTPUT} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()

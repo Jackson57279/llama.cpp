@@ -11,8 +11,9 @@ find_package(BLAS)
 if (BLAS_FOUND)
     message(STATUS "BLAS found, Libraries: ${BLAS_LIBRARIES}")
 
+    set_source_files_properties(ggml-blas.cpp.inc PROPERTIES LANGUAGE CXX)
     ggml_add_backend_library(ggml-blas
-                             ggml-blas.cpp
+                             ggml-blas.cpp.inc
                             )
 
     if (${GGML_BLAS_VENDOR} MATCHES "Apple")

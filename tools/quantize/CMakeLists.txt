@@ -1,9 +1,21 @@
 set(TARGET llama-quantize)
-add_executable(${TARGET} quantize.cpp)
-target_link_libraries(${TARGET} PRIVATE llama-common llama ${CMAKE_THREAD_LIBS_INIT})
-target_include_directories(${TARGET} PRIVATE ../../common)
-target_compile_features(${TARGET} PRIVATE cxx_std_17)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+
+set(QUANTIZE_RUST_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/../quantize-rust/Cargo.toml)
+set(QUANTIZE_RUST_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/quantize)
+set(QUANTIZE_RUST_BIN ${QUANTIZE_RUST_TARGET_DIR}/debug/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+set(QUANTIZE_RUST_OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+
+add_custom_command(
+    OUTPUT ${QUANTIZE_RUST_OUTPUT}
+    COMMAND ${CARGO_EXECUTABLE} build --manifest-path ${QUANTIZE_RUST_MANIFEST} --target-dir ${QUANTIZE_RUST_TARGET_DIR} --bin ${TARGET}
+    COMMAND ${CMAKE_COMMAND} -E copy ${QUANTIZE_RUST_BIN} ${QUANTIZE_RUST_OUTPUT}
+    DEPENDS
+        ${QUANTIZE_RUST_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../quantize-rust/src/main.rs
+)
+add_custom_target(${TARGET} ALL DEPENDS ${QUANTIZE_RUST_OUTPUT})
 
 if(LLAMA_TOOLS_INSTALL)
-    install(TARGETS ${TARGET} RUNTIME)
+    install(PROGRAMS ${QUANTIZE_RUST_OUTPUT} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()

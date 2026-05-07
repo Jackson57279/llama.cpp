@@ -2,35 +2,35 @@
 Apple Metal:
     - changed-files:
         - any-glob-to-any-file:
-            - ggml/include/ggml-metal.h
+            - ggml/include/ggml-metal.h.inc
             - ggml/src/ggml-metal/**
             - README-metal.md
 SYCL:
     - changed-files:
         - any-glob-to-any-file:
-            - ggml/include/ggml-sycl.h
+            - ggml/include/ggml-sycl.h.inc
             - ggml/src/ggml-sycl/**
             - docs/backend/SYCL.md
             - examples/sycl/**
 Nvidia GPU:
     - changed-files:
         - any-glob-to-any-file:
-            - ggml/include/ggml-cuda.h
+            - ggml/include/ggml-cuda.h.inc
             - ggml/src/ggml-cuda/**
 Vulkan:
     - changed-files:
         - any-glob-to-any-file:
-            - ggml/include/ggml-vulkan.h
+            - ggml/include/ggml-vulkan.h.inc
             - ggml/src/ggml-vulkan/**
 IBM zDNN:
     - changed-files:
         - any-glob-to-any-file:
-            - ggml/include/ggml-zdnn.h
+            - ggml/include/ggml-zdnn.h.inc
             - ggml/src/ggml-zdnn/**
 AMD ZenDNN:
     - changed-files:
         - any-glob-to-any-file:
-            - ggml/include/ggml-zendnn.h
+            - ggml/include/ggml-zendnn.h.inc
             - ggml/src/ggml-zendnn/**
 documentation:
     - changed-files:
@@ -109,28 +109,28 @@ jinja parser:
 Ascend NPU:
     - changed-files:
         - any-glob-to-any-file:
-            - ggml/include/ggml-cann.h
+            - ggml/include/ggml-cann.h.inc
             - ggml/src/ggml-cann/**
             - docs/backend/CANN.md
 OpenCL:
     - changed-files:
         - any-glob-to-any-file:
-            - ggml/include/ggml-opencl.h
+            - ggml/include/ggml-opencl.h.inc
             - ggml/src/ggml-opencl/**
             - docs/backend/OPENCL.md
 Hexagon:
     - changed-files:
         - any-glob-to-any-file:
-            - ggml/include/ggml-hexagon.h
+            - ggml/include/ggml-hexagon.h.inc
             - ggml/src/ggml-hexagon/**
 WebGPU:
     - changed-files:
         - any-glob-to-any-file:
-            - ggml/include/ggml-webgpu.h
+            - ggml/include/ggml-webgpu.h.inc
             - ggml/src/ggml-webgpu/**
 OpenVINO:
     - changed-files:
         - any-glob-to-any-file:
-            - ggml/include/ggml-openvino.h
+            - ggml/include/ggml-openvino.h.inc
             - ggml/src/ggml-openvino/**
             - docs/backend/OPENVINO.md

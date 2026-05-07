@@ -1,0 +1,14 @@
+[package]
+name = "llama-gguf-hash-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "llama-gguf-hash"
+path = "src/main.rs"
+
+[dependencies]
+sha1 = "0.10"
+sha2 = "0.10"
+xxhash-rust = { version = "0.8", features = ["xxh64"] }

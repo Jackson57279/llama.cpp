@@ -1,6 +1,6 @@
 # Function Calling
 
-[chat.h](../common/chat.h) (https://github.com/ggml-org/llama.cpp/pull/9639) adds support for [OpenAI-style function calling](https://platform.openai.com/docs/guides/function-calling) and is used in:
+[common.h.inc](../common/common.h.inc) (https://github.com/ggml-org/llama.cpp/pull/9639) adds support for [OpenAI-style function calling](https://platform.openai.com/docs/guides/function-calling) and is used in:
 - `llama-server` when started w/ `--jinja` flag
 
 ## Universal support w/ Native & Generic handlers

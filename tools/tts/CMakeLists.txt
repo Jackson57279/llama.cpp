@@ -1,8 +1,21 @@
 set(TARGET llama-tts)
-add_executable(${TARGET} tts.cpp)
-target_link_libraries(${TARGET} PRIVATE llama llama-common ${CMAKE_THREAD_LIBS_INIT})
-target_compile_features(${TARGET} PRIVATE cxx_std_17)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+
+set(TTS_RUST_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/../tts-rust/Cargo.toml)
+set(TTS_RUST_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/tts)
+set(TTS_RUST_BIN ${TTS_RUST_TARGET_DIR}/debug/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+set(TTS_RUST_OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+
+add_custom_command(
+    OUTPUT ${TTS_RUST_OUTPUT}
+    COMMAND ${CARGO_EXECUTABLE} build --manifest-path ${TTS_RUST_MANIFEST} --target-dir ${TTS_RUST_TARGET_DIR} --bin ${TARGET}
+    COMMAND ${CMAKE_COMMAND} -E copy ${TTS_RUST_BIN} ${TTS_RUST_OUTPUT}
+    DEPENDS
+        ${TTS_RUST_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../tts-rust/src/main.rs
+)
+add_custom_target(${TARGET} ALL DEPENDS ${TTS_RUST_OUTPUT})
 
 if(LLAMA_TOOLS_INSTALL)
-    install(TARGETS ${TARGET} RUNTIME)
+    install(PROGRAMS ${TTS_RUST_OUTPUT} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()

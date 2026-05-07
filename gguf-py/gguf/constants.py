@@ -10,7 +10,7 @@ from typing import Any
 GGUF_MAGIC             = 0x46554747  # "GGUF"
 GGUF_VERSION           = 3
 GGUF_DEFAULT_ALIGNMENT = 32
-GGML_QUANT_VERSION     = 2  # GGML_QNT_VERSION from ggml.h
+GGML_QUANT_VERSION     = 2  # GGML_QNT_VERSION from ggml.h.inc
 
 #
 # metadata keys
@@ -4032,10 +4032,10 @@ class ExpertGatingFuncType(IntEnum):
     SIGMOID  = 2
 
 
-# TODO: add GGMLFileType from ggml_ftype in ggml.h
+# TODO: add GGMLFileType from ggml_ftype in ggml.h.inc
 
 
-# from llama_ftype in llama.h
+# from llama_ftype in llama.h.inc
 # ALL VALUES SHOULD BE THE SAME HERE AS THEY ARE OVER THERE.
 class LlamaFileType(IntEnum):
     ALL_F32              = 0

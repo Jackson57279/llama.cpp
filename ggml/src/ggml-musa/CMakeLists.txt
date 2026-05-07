@@ -25,34 +25,34 @@ if (MUSAToolkit_FOUND)
     endif()
     message(STATUS "Using MUSA architectures: ${MUSA_ARCHITECTURES}")
 
-    file(GLOB   GGML_HEADERS_MUSA "../ggml-cuda/*.cuh")
-    list(APPEND GGML_HEADERS_MUSA "../../include/ggml-cuda.h")
-    list(APPEND GGML_HEADERS_MUSA "../ggml-musa/mudnn.cuh")
+    file(GLOB   GGML_HEADERS_MUSA "../ggml-cuda/*.cuh.inc")
+    list(APPEND GGML_HEADERS_MUSA "../../include/ggml-cuda.h.inc")
+    list(APPEND GGML_HEADERS_MUSA "../ggml-musa/mudnn.cuh.inc")
 
-    file(GLOB   GGML_SOURCES_MUSA "../ggml-cuda/*.cu")
-    file(GLOB   SRCS "../ggml-cuda/template-instances/fattn-tile*.cu")
+    file(GLOB   GGML_SOURCES_MUSA "../ggml-cuda/*.cu.inc")
+    file(GLOB   SRCS "../ggml-cuda/template-instances/fattn-tile*.cu.inc")
     list(APPEND GGML_SOURCES_MUSA ${SRCS})
-    file(GLOB   SRCS "../ggml-cuda/template-instances/fattn-mma*.cu")
+    file(GLOB   SRCS "../ggml-cuda/template-instances/fattn-mma*.cu.inc")
     list(APPEND GGML_SOURCES_MUSA ${SRCS})
-    file(GLOB   SRCS "../ggml-cuda/template-instances/mmq*.cu")
+    file(GLOB   SRCS "../ggml-cuda/template-instances/mmq*.cu.inc")
     list(APPEND GGML_SOURCES_MUSA ${SRCS})
 
     if (GGML_MUSA_MUDNN_COPY)
-        file(GLOB   SRCS "../ggml-musa/*.cu")
+        file(GLOB   SRCS "../ggml-musa/*.cu.inc")
         list(APPEND GGML_SOURCES_MUSA ${SRCS})
         add_compile_definitions(GGML_MUSA_MUDNN_COPY)
     endif()
 
     if (GGML_CUDA_FA_ALL_QUANTS)
-        file(GLOB   SRCS "../ggml-cuda/template-instances/fattn-vec*.cu")
+        file(GLOB   SRCS "../ggml-cuda/template-instances/fattn-vec*.cu.inc")
         list(APPEND GGML_SOURCES_MUSA ${SRCS})
         add_compile_definitions(GGML_CUDA_FA_ALL_QUANTS)
     else()
         list(APPEND GGML_SOURCES_MUSA
-            ../ggml-cuda/template-instances/fattn-vec-instance-f16-f16.cu
-            ../ggml-cuda/template-instances/fattn-vec-instance-q4_0-q4_0.cu
-            ../ggml-cuda/template-instances/fattn-vec-instance-q8_0-q8_0.cu
-            ../ggml-cuda/template-instances/fattn-vec-instance-bf16-bf16.cu)
+            ../ggml-cuda/template-instances/fattn-vec-instance-f16-f16.cu.inc
+            ../ggml-cuda/template-instances/fattn-vec-instance-q4_0-q4_0.cu.inc
+            ../ggml-cuda/template-instances/fattn-vec-instance-q8_0-q8_0.cu.inc
+            ../ggml-cuda/template-instances/fattn-vec-instance-bf16-bf16.cu.inc)
     endif()
 
     set_source_files_properties(${GGML_SOURCES_MUSA} PROPERTIES LANGUAGE CXX)

@@ -1,10 +1,23 @@
 set(TARGET llama-cli)
-add_executable(${TARGET} cli.cpp)
-target_link_libraries(${TARGET} PRIVATE server-context PUBLIC llama-common ${CMAKE_THREAD_LIBS_INIT})
-target_compile_features(${TARGET} PRIVATE cxx_std_17)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
 
-include_directories(../server)
+set(CLI_RUST_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/../cli-rust/Cargo.toml)
+set(CLI_RUST_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/cli)
+set(CLI_RUST_BIN ${CLI_RUST_TARGET_DIR}/debug/llama-cli${CMAKE_EXECUTABLE_SUFFIX})
+set(CLI_RUST_OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+
+add_custom_command(
+    OUTPUT ${CLI_RUST_OUTPUT}
+    COMMAND ${CMAKE_COMMAND} -E env LLAMA_CPP_LIB_DIR=$<TARGET_FILE_DIR:llama>
+            ${CARGO_EXECUTABLE} build --manifest-path ${CLI_RUST_MANIFEST} --target-dir ${CLI_RUST_TARGET_DIR} --bin llama-cli
+    COMMAND ${CMAKE_COMMAND} -E copy ${CLI_RUST_BIN} ${CLI_RUST_OUTPUT}
+    DEPENDS
+        ${CLI_RUST_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../cli-rust/src/main.rs
+)
+
+add_custom_target(${TARGET} ALL DEPENDS ${CLI_RUST_OUTPUT})
 
 if(LLAMA_TOOLS_INSTALL)
-    install(TARGETS ${TARGET} RUNTIME)
+    install(PROGRAMS ${CLI_RUST_OUTPUT} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()

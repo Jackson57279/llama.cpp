@@ -1,22 +1,23 @@
 set(TARGET llama-gguf-hash)
-add_executable(${TARGET} gguf-hash.cpp)
-install(TARGETS ${TARGET} RUNTIME)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
 
-# clibs dependencies
-include_directories(deps/)
+set(GGUF_HASH_RUST_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/../gguf-hash-rust/Cargo.toml)
+set(GGUF_HASH_RUST_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/gguf-hash)
+set(GGUF_HASH_RUST_BIN ${GGUF_HASH_RUST_TARGET_DIR}/debug/llama-gguf-hash${CMAKE_EXECUTABLE_SUFFIX})
+set(GGUF_HASH_RUST_OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
 
-add_library(xxhash OBJECT deps/xxhash/xxhash.c deps/xxhash/xxhash.h)
-target_link_libraries(${TARGET} PRIVATE xxhash)
+add_custom_command(
+    OUTPUT ${GGUF_HASH_RUST_OUTPUT}
+    COMMAND ${CMAKE_COMMAND} -E env GGML_LIB_DIR=$<TARGET_FILE_DIR:ggml>
+            ${CARGO_EXECUTABLE} build --manifest-path ${GGUF_HASH_RUST_MANIFEST} --target-dir ${GGUF_HASH_RUST_TARGET_DIR} --bin llama-gguf-hash
+    COMMAND ${CMAKE_COMMAND} -E copy ${GGUF_HASH_RUST_BIN} ${GGUF_HASH_RUST_OUTPUT}
+    DEPENDS
+        ggml
+        ${GGUF_HASH_RUST_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../gguf-hash-rust/build.rs
+        ${CMAKE_CURRENT_SOURCE_DIR}/../gguf-hash-rust/src/lib.rs
+        ${CMAKE_CURRENT_SOURCE_DIR}/../gguf-hash-rust/src/main.rs
+)
 
-add_library(sha1 OBJECT deps/sha1/sha1.c deps/sha1/sha1.h)
-target_link_libraries(${TARGET} PRIVATE sha1)
-if (NOT MSVC)
-    # disable warnings in 3rd party code
-    target_compile_options(sha1 PRIVATE -w)
-endif()
-
-add_library(sha256 OBJECT deps/sha256/sha256.c deps/sha256/sha256.h)
-target_link_libraries(${TARGET} PRIVATE sha256)
-
-target_link_libraries(${TARGET} PRIVATE ggml ${CMAKE_THREAD_LIBS_INIT})
-target_compile_features(${TARGET} PRIVATE cxx_std_17)
+add_custom_target(${TARGET} ALL DEPENDS ${GGUF_HASH_RUST_OUTPUT})
+install(PROGRAMS ${GGUF_HASH_RUST_OUTPUT} DESTINATION ${CMAKE_INSTALL_BINDIR})

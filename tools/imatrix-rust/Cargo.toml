@@ -1,0 +1,9 @@
+[package]
+name = "llama-imatrix-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "llama-imatrix"
+path = "src/main.rs"

@@ -136,7 +136,7 @@ You can use GBNF grammars:
 
 - In [llama-server](../tools/server)'s completion endpoints, passed as the `grammar` body field
 - In [llama-cli](../tools/cli) and [llama-completion](../tools/completion), passed as the `--grammar` & `--grammar-file` flags
-- With [test-gbnf-validator](../tests/test-gbnf-validator.cpp), to test them against strings.
+- With `test-gbnf-validator`, to test them against strings.
 
 ## JSON Schemas → GBNF
 

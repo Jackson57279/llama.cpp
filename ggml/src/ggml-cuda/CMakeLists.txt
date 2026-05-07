@@ -98,30 +98,32 @@ if (CUDAToolkit_FOUND)
     endif()
     message(STATUS "Using CMAKE_CUDA_ARCHITECTURES=${CMAKE_CUDA_ARCHITECTURES} CMAKE_CUDA_ARCHITECTURES_NATIVE=${CMAKE_CUDA_ARCHITECTURES_NATIVE}")
 
-    file(GLOB   GGML_HEADERS_CUDA "*.cuh")
-    list(APPEND GGML_HEADERS_CUDA "../../include/ggml-cuda.h")
+    file(GLOB   GGML_HEADERS_CUDA "*.cuh.inc")
+    list(APPEND GGML_HEADERS_CUDA "../../include/ggml-cuda.h.inc")
 
-    file(GLOB   GGML_SOURCES_CUDA "*.cu")
-    file(GLOB   SRCS "template-instances/fattn-tile*.cu")
+    file(GLOB   GGML_SOURCES_CUDA "*.cu.inc")
+    file(GLOB   SRCS "template-instances/fattn-tile*.cu.inc")
     list(APPEND GGML_SOURCES_CUDA ${SRCS})
-    file(GLOB   SRCS "template-instances/fattn-mma*.cu")
+    file(GLOB   SRCS "template-instances/fattn-mma*.cu.inc")
     list(APPEND GGML_SOURCES_CUDA ${SRCS})
-    file(GLOB   SRCS "template-instances/mmq*.cu")
+    file(GLOB   SRCS "template-instances/mmq*.cu.inc")
     list(APPEND GGML_SOURCES_CUDA ${SRCS})
-    file(GLOB   SRCS "template-instances/mmf*.cu")
+    file(GLOB   SRCS "template-instances/mmf*.cu.inc")
     list(APPEND GGML_SOURCES_CUDA ${SRCS})
 
     if (GGML_CUDA_FA_ALL_QUANTS)
-        file(GLOB   SRCS "template-instances/fattn-vec*.cu")
+        file(GLOB   SRCS "template-instances/fattn-vec*.cu.inc")
         list(APPEND GGML_SOURCES_CUDA ${SRCS})
         add_compile_definitions(GGML_CUDA_FA_ALL_QUANTS)
     else()
         list(APPEND GGML_SOURCES_CUDA
-            template-instances/fattn-vec-instance-f16-f16.cu
-            template-instances/fattn-vec-instance-q4_0-q4_0.cu
-            template-instances/fattn-vec-instance-q8_0-q8_0.cu
-            template-instances/fattn-vec-instance-bf16-bf16.cu)
+            template-instances/fattn-vec-instance-f16-f16.cu.inc
+            template-instances/fattn-vec-instance-q4_0-q4_0.cu.inc
+            template-instances/fattn-vec-instance-q8_0-q8_0.cu.inc
+            template-instances/fattn-vec-instance-bf16-bf16.cu.inc)
     endif()
+
+    set_source_files_properties(${GGML_SOURCES_CUDA} PROPERTIES LANGUAGE CUDA)
 
     ggml_add_backend_library(ggml-cuda
                              ${GGML_HEADERS_CUDA}

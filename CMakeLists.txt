@@ -240,8 +240,7 @@ set(LLAMA_LIB_INSTALL_DIR     ${CMAKE_INSTALL_LIBDIR}     CACHE PATH "Location o
 set(LLAMA_BIN_INSTALL_DIR     ${CMAKE_INSTALL_BINDIR}     CACHE PATH "Location of binary  files")
 
 set(LLAMA_PUBLIC_HEADERS
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/llama.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/llama-cpp.h)
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/llama.h.inc)
 
 set_target_properties(llama
     PROPERTIES

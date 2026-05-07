@@ -1,8 +1,23 @@
 set(TARGET llama-completion)
-add_executable(${TARGET} completion.cpp)
-target_link_libraries(${TARGET} PRIVATE llama-common llama ${CMAKE_THREAD_LIBS_INIT})
-target_compile_features(${TARGET} PRIVATE cxx_std_17)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+
+set(COMPLETION_RUST_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/../completion-rust/Cargo.toml)
+set(COMPLETION_RUST_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/completion)
+set(COMPLETION_RUST_BIN ${COMPLETION_RUST_TARGET_DIR}/debug/llama-completion${CMAKE_EXECUTABLE_SUFFIX})
+set(COMPLETION_RUST_OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+
+add_custom_command(
+    OUTPUT ${COMPLETION_RUST_OUTPUT}
+    COMMAND ${CMAKE_COMMAND} -E env LLAMA_CPP_LIB_DIR=$<TARGET_FILE_DIR:llama>
+            ${CARGO_EXECUTABLE} build --manifest-path ${COMPLETION_RUST_MANIFEST} --target-dir ${COMPLETION_RUST_TARGET_DIR} --bin llama-completion
+    COMMAND ${CMAKE_COMMAND} -E copy ${COMPLETION_RUST_BIN} ${COMPLETION_RUST_OUTPUT}
+    DEPENDS
+        ${COMPLETION_RUST_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../completion-rust/src/main.rs
+)
+
+add_custom_target(${TARGET} ALL DEPENDS ${COMPLETION_RUST_OUTPUT})
 
 if(LLAMA_TOOLS_INSTALL)
-    install(TARGETS ${TARGET} RUNTIME)
+    install(PROGRAMS ${COMPLETION_RUST_OUTPUT} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()

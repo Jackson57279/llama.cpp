@@ -1,0 +1,9 @@
+[package]
+name = "llama-vdot-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "llama-vdot"
+path = "src/main.rs"

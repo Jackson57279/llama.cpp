@@ -18,19 +18,51 @@ endif()
 message(STATUS "SYCL found")
 #todo: AOT
 
+set(GGML_SOURCES_SYCL
+    ggml-sycl.inc
+    common.inc
+    add-id.inc
+    binbcast.inc
+    concat.inc
+    conv.inc
+    convert.inc
+    count-equal.inc
+    cpy.inc
+    dmmv.inc
+    element_wise.inc
+    fattn.inc
+    fattn-tile.inc
+    gated_delta_net.inc
+    getrows.inc
+    gla.inc
+    im2col.inc
+    mmq.inc
+    mmvq.inc
+    norm.inc
+    outprod.inc
+    pad.inc
+    pad_reflect_1d.inc
+    repeat_back.inc
+    roll.inc
+    rope.inc
+    set.inc
+    set_rows.inc
+    softmax.inc
+    ssm_conv.inc
+    sycl_hw.inc
+    tsembd.inc
+    upscale.inc
+    wkv.inc
+    template-instances/fattn-tile-instances.inc
+    template-instances/fattn-vec-instances.inc
+)
+
+set_source_files_properties(${GGML_SOURCES_SYCL} PROPERTIES LANGUAGE CXX)
+
 ggml_add_backend_library(ggml-sycl
-                         ggml-sycl.cpp
-                         ../../include/ggml-sycl.h
+                         ${GGML_SOURCES_SYCL}
+                         ../../include/ggml-sycl.h.inc
                         )
-
-file(GLOB   GGML_HEADERS_SYCL "*.hpp")
-file(GLOB   GGML_SOURCES_SYCL "*.cpp")
-file(GLOB   SRCS "template-instances/fattn-tile*.cpp")
-list(APPEND GGML_SOURCES_SYCL ${SRCS})
-file(GLOB   SRCS "template-instances/fattn-vec*.cpp")
-list(APPEND GGML_SOURCES_SYCL ${SRCS})
-
-target_sources(ggml-sycl PRIVATE ${GGML_HEADERS_SYCL} ${GGML_SOURCES_SYCL})
 
 if (WIN32)
     # To generate a Visual Studio solution, using Intel C++ Compiler for ggml-sycl is mandatory
@@ -163,4 +195,3 @@ if (GGML_SYCL_DEVICE_ARCH)
     target_compile_options(ggml-sycl PRIVATE -Xsycl-target-backend --offload-arch=${GGML_SYCL_DEVICE_ARCH})
     target_link_options(ggml-sycl PRIVATE -Xsycl-target-backend --offload-arch=${GGML_SYCL_DEVICE_ARCH})
 endif()
-

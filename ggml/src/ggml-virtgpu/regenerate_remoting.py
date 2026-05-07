@@ -268,46 +268,6 @@ static const backend_dispatch_t apir_backend_dispatch_table[APIR_BACKEND_DISPATC
             base_path = self.config_data.get('base_path', 'ggml/src')
             frontend_base = Path(base_path) / "ggml-virtgpu"
 
-        # Compute final file paths
-        backend_base = frontend_base / "backend"
-        apir_backend_path = backend_base / "shared" / "apir_backend.gen.h"
-        backend_dispatched_path = backend_base / "backend-dispatched.gen.h"
-        virtgpu_forward_path = frontend_base / "virtgpu-forward.gen.h"
-
-        # Create output directories for each file
-        apir_backend_path.parent.mkdir(parents=True, exist_ok=True)
-        backend_dispatched_path.parent.mkdir(parents=True, exist_ok=True)
-        virtgpu_forward_path.parent.mkdir(parents=True, exist_ok=True)
-
-        # Generate header files
-        logging.info("📁 Generating header files...")
-
-        apir_backend_content = self.generate_apir_backend_header()
-        apir_backend_path.write_text(apir_backend_content)
-        logging.info(f"   ✅ {apir_backend_path.resolve()}")
-
-        backend_dispatched_content = self.generate_backend_dispatched_header()
-        backend_dispatched_path.write_text(backend_dispatched_content)
-        logging.info(f"   ✅ {backend_dispatched_path.resolve()}")
-
-        virtgpu_forward_content = self.generate_virtgpu_forward_header()
-        virtgpu_forward_path.write_text(virtgpu_forward_content)
-        logging.info(f"   ✅ {virtgpu_forward_path.resolve()}")
-
-        # Format generated files with clang-format
-        generated_files = [apir_backend_path, backend_dispatched_path, virtgpu_forward_path]
-
-        if not self.clang_format_available:
-            logging.warning("\n⚠️clang-format not found in PATH. Generated files will not be formatted.\n"
-                            "   Install clang-format to enable automatic code formatting.")
-        else:
-            logging.info("\n🎨 Formatting files with clang-format...")
-            for file_path in generated_files:
-                if self._format_file_with_clang_format(file_path):
-                    logging.info(f"   ✅ Formatted {file_path.name}")
-                else:
-                    logging.warning(f"   ❌ Failed to format {file_path.name}")
-
         # Generate summary
         functions = self.get_enabled_functions()
         total_functions = len(functions)
@@ -316,7 +276,7 @@ static const backend_dispatch_t apir_backend_dispatch_table[APIR_BACKEND_DISPATC
         logging.info("=" * 50)
         logging.info(f"   Total functions: {total_functions}")
         logging.info(f"   Function groups: {len(self.functions)}")
-        logging.info("   Header files: 3")
+        logging.info("   Header files: 0")
         logging.info(f"   Working directory: {current_dir}")
 
 

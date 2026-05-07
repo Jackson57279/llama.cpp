@@ -7,7 +7,9 @@ llama_add_compile_flags()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-add_library(${TARGET} STATIC httplib.cpp httplib.h)
+add_library(${TARGET} STATIC httplib.cpp.inc httplib.h.inc)
+set_source_files_properties(httplib.cpp.inc PROPERTIES LANGUAGE CXX)
+set_source_files_properties(httplib.h.inc PROPERTIES HEADER_FILE_ONLY TRUE)
 
 # disable warnings in 3rd party code
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
@@ -183,7 +185,7 @@ if(LLAMA_BUILD_BORINGSSL OR LLAMA_BUILD_LIBRESSL)
 endif()
 
 if (CPPHTTPLIB_OPENSSL_SUPPORT)
-    target_compile_definitions(${TARGET} PUBLIC CPPHTTPLIB_OPENSSL_SUPPORT) # used in server.cpp
+    target_compile_definitions(${TARGET} PUBLIC CPPHTTPLIB_OPENSSL_SUPPORT) # used in server.cpp.inc
     if (APPLE AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         find_library(CORE_FOUNDATION_FRAMEWORK CoreFoundation REQUIRED)
         find_library(SECURITY_FRAMEWORK Security REQUIRED)

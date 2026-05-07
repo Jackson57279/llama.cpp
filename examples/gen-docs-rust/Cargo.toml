@@ -1,0 +1,9 @@
+[package]
+name = "llama-gen-docs-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "llama-gen-docs"
+path = "src/main.rs"

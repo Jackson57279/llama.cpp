@@ -1,11 +1,11 @@
-#import "ggml-metal-context.h"
+#import "ggml-metal-context-defs.inc"
 
-#import "ggml-impl.h"
-#import "ggml-backend-impl.h"
+#import "ggml-impl-defs.inc"
+#import "ggml-backend-impl-defs.inc"
 
-#import "ggml-metal-impl.h"
-#import "ggml-metal-common.h"
-#import "ggml-metal-ops.h"
+#import "ggml-metal-impl-defs.inc"
+#import "ggml-metal-common-defs.inc"
+#import "ggml-metal-ops-defs.inc"
 
 #import <Foundation/Foundation.h>
 

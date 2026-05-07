@@ -241,13 +241,13 @@ common_chat_params (prompt, parser, grammar, triggers, preserved_tokens)
 
 ## Entry Point
 
-The auto-parser is invoked in [common/chat.cpp:1280-1310](common/chat.cpp#L1280-L1310) in `common_chat_templates_apply_jinja`. A few specialized templates are handled first (Ministral/Magistral Large 3, GPT-OSS with `<|channel|>`, Functionary v3.2 with `>>>all`), then the auto-parser handles everything else via `autoparser::autoparser` + `peg_generator::generate_parser`.
+The auto-parser is invoked in `common/common.cpp.inc` in `common_chat_templates_apply_jinja`. A few specialized templates are handled first (Ministral/Magistral Large 3, GPT-OSS with `<|channel|>`, Functionary v3.2 with `>>>all`), then the auto-parser handles everything else via `autoparser::autoparser` + `peg_generator::generate_parser`.
 
 ## Algorithm Details
 
 ### Core Mechanism: Differential Comparison
 
-All analysis phases use the same factorized comparison function declared in [common/chat-auto-parser-helpers.h:68](common/chat-auto-parser-helpers.h#L68):
+All analysis phases use the same factorized comparison function declared in [common/chat-auto-parser.h](common/chat-auto-parser.h):
 
 ```cpp
 compare_variants(tmpl, params_A, params_modifier)
@@ -350,7 +350,7 @@ Classification logic:
 
 ### Workarounds
 
-A workaround array in `common/chat-diff-analyzer.cpp` applies post-hoc patches after analysis. Each workaround is a lambda that inspects the template source and overrides analysis results. Current workarounds:
+A workaround array in `common/common.cpp.inc` applies post-hoc patches after analysis. Each workaround is a lambda that inspects the template source and overrides analysis results. Current workarounds:
 
 1. **Old Qwen/DeepSeek thinking templates** — source contains `content.split('</think>')` but not `<SPECIAL_12>`: sets `reasoning.mode = TAG_BASED` with `<think>`/`</think>` markers if no reasoning was detected
 2. **Granite 3.3** — source contains specific "Write your thoughts" text: forces `TAG_BASED` reasoning with `<think>`/`</think>` and `WRAPPED_WITH_REASONING` content with `<response>`/`</response>`
@@ -437,12 +437,7 @@ Each returned parser is wrapped by `wrap_for_generation_prompt()`, which prepend
 | File                                      | Purpose                                                                         |
 |-------------------------------------------|---------------------------------------------------------------------------------|
 | `common/chat-auto-parser.h`               | All analysis structs, enums, `autoparser`, `peg_generator`, `generation_params` |
-| `common/chat-auto-parser-generator.cpp`   | Parser generator: `generate_parser()` and `build_parser()` methods              |
-| `common/chat-diff-analyzer.cpp`           | Differential analysis implementation and workarounds                            |
-| `common/chat-auto-parser-helpers.h/cpp`   | `calculate_diff_split()`, `segmentize_markers()`, `compare_variants()`,         |
-|                                           | `wrap_for_generation_prompt()`, string helpers                                  |
-| `common/chat-peg-parser.h/cpp`            | `common_chat_peg_builder`, `common_chat_peg_mapper`, and helpers                |
-| `common/chat.cpp`                         | Entry point: `common_chat_templates_apply_jinja()`                              |
+| `common/common.cpp.inc`                       | Parser generator, differential analysis, PEG/chat grammar helpers, and chat entry points |
 | `tools/parser/debug-template-parser.cpp`  | Debug tool for template analysis                                                |
 | `tools/parser/template-analysis.cpp`      | Template analysis tool                                                          |
 
@@ -519,8 +514,8 @@ The following templates have active tests in `tests/test-chat.cpp`:
 To support a new template format:
 
 1. **If it follows standard patterns** — The auto-parser should detect it automatically. Run `llama-debug-template-parser` to verify markers are correctly extracted.
-2. **If differential analysis extracts incorrect markers** — Add a workaround lambda to the `workarounds` vector in `common/chat-diff-analyzer.cpp`. Inspect the template source for a unique identifying substring.
-3. **If it needs fundamentally different handling** — Add a dedicated handler function in `chat.cpp` before the auto-parser block (as done for GPT-OSS, Functionary v3.2, and Ministral).
+2. **If differential analysis extracts incorrect markers** — Add a workaround lambda to the `workarounds` vector in `common/common.cpp.inc`. Inspect the template source for a unique identifying substring.
+3. **If it needs fundamentally different handling** — Add a dedicated handler function in `common/common.cpp.inc` before the auto-parser block (as done for GPT-OSS, Functionary v3.2, and Ministral).
 
 ## Edge Cases and Quirks
 

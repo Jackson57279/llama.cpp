@@ -189,24 +189,54 @@ if (GGML_BACKEND_DL AND NOT BUILD_SHARED_LIBS)
     message(FATAL_ERROR "GGML_BACKEND_DL requires BUILD_SHARED_LIBS")
 endif()
 
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+set(GGML_THREADING_RUST_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/ggml-threading-rust/Cargo.toml)
+set(GGML_THREADING_RUST_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/ggml-threading)
+set(GGML_THREADING_RUST_LIB ${GGML_THREADING_RUST_TARGET_DIR}/debug/${CMAKE_STATIC_LIBRARY_PREFIX}ggml_threading_rust${CMAKE_STATIC_LIBRARY_SUFFIX})
+set(GGML_BACKEND_DL_RUST_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/ggml-backend-dl-rust/Cargo.toml)
+set(GGML_BACKEND_DL_RUST_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/ggml-backend-dl)
+set(GGML_BACKEND_DL_RUST_LIB ${GGML_BACKEND_DL_RUST_TARGET_DIR}/debug/${CMAKE_STATIC_LIBRARY_PREFIX}ggml_backend_dl_rust${CMAKE_STATIC_LIBRARY_SUFFIX})
+
+add_custom_command(
+    OUTPUT ${GGML_THREADING_RUST_LIB}
+    COMMAND ${CMAKE_COMMAND} -E env "RUSTFLAGS=-Crelocation-model=pic -Cpanic=abort"
+            ${CARGO_EXECUTABLE} build --manifest-path ${GGML_THREADING_RUST_MANIFEST} --target-dir ${GGML_THREADING_RUST_TARGET_DIR}
+    DEPENDS
+        ${GGML_THREADING_RUST_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/ggml-threading-rust/src/lib.rs
+)
+add_custom_target(ggml-threading-rust-build DEPENDS ${GGML_THREADING_RUST_LIB})
+add_library(ggml-threading-rust STATIC IMPORTED GLOBAL)
+set_target_properties(ggml-threading-rust PROPERTIES IMPORTED_LOCATION ${GGML_THREADING_RUST_LIB})
+add_dependencies(ggml-threading-rust ggml-threading-rust-build)
+
+add_custom_command(
+    OUTPUT ${GGML_BACKEND_DL_RUST_LIB}
+    COMMAND ${CMAKE_COMMAND} -E env "RUSTFLAGS=-Crelocation-model=pic -Cpanic=abort"
+            ${CARGO_EXECUTABLE} build --manifest-path ${GGML_BACKEND_DL_RUST_MANIFEST} --target-dir ${GGML_BACKEND_DL_RUST_TARGET_DIR}
+    DEPENDS
+        ${GGML_BACKEND_DL_RUST_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/ggml-backend-dl-rust/src/lib.rs
+)
+add_custom_target(ggml-backend-dl-rust-build DEPENDS ${GGML_BACKEND_DL_RUST_LIB})
+add_library(ggml-backend-dl-rust STATIC IMPORTED GLOBAL)
+set_target_properties(ggml-backend-dl-rust PROPERTIES IMPORTED_LOCATION ${GGML_BACKEND_DL_RUST_LIB})
+add_dependencies(ggml-backend-dl-rust ggml-backend-dl-rust-build)
+
+set_source_files_properties(ggml.c.inc PROPERTIES LANGUAGE C)
+set_source_files_properties(ggml-backend.cpp.inc PROPERTIES LANGUAGE CXX)
+set_source_files_properties(ggml-backend-reg.cpp.inc PROPERTIES LANGUAGE CXX)
+set_source_files_properties(ggml-quants-defs.inc PROPERTIES HEADER_FILE_ONLY TRUE)
+
 add_library(ggml-base
-            ../include/ggml.h
-            ../include/ggml-alloc.h
-            ../include/ggml-backend.h
-            ../include/ggml-cpp.h
-            ../include/ggml-opt.h
-            ../include/gguf.h
-            ggml.c
-            ggml.cpp
-            ggml-alloc.c
-            ggml-backend.cpp
-            ggml-backend-meta.cpp
-            ggml-opt.cpp
-            ggml-threading.cpp
-            ggml-threading.h
-            ggml-quants.c
-            ggml-quants.h
-            gguf.cpp)
+            ../include/ggml.h.inc
+            ../include/ggml-alloc.h.inc
+            ../include/ggml-backend.h.inc
+            ../include/ggml-opt.h.inc
+            ../include/gguf.h.inc
+            ggml.c.inc
+            ggml-backend.cpp.inc
+            ggml-quants-defs.inc)
 
 set_target_properties(ggml-base PROPERTIES
     VERSION ${GGML_VERSION}
@@ -214,6 +244,7 @@ set_target_properties(ggml-base PROPERTIES
 )
 
 target_include_directories(ggml-base PRIVATE .)
+target_link_libraries(ggml-base PRIVATE ggml-threading-rust Threads::Threads ${CMAKE_DL_LIBS})
 if (GGML_BACKEND_DL)
     target_compile_definitions(ggml-base PUBLIC GGML_BACKEND_DL)
 endif()
@@ -223,8 +254,7 @@ if (GGML_SCHED_NO_REALLOC)
 endif()
 
 add_library(ggml
-            ggml-backend-dl.cpp
-            ggml-backend-reg.cpp)
+            ggml-backend-reg.cpp.inc)
 add_library(ggml::ggml ALIAS ggml)
 
 set_target_properties(ggml PROPERTIES
@@ -239,7 +269,7 @@ if (GGML_BACKEND_DIR)
     target_compile_definitions(ggml PUBLIC GGML_BACKEND_DIR="${GGML_BACKEND_DIR}")
 endif()
 
-target_link_libraries(ggml PUBLIC ggml-base)
+target_link_libraries(ggml PUBLIC ggml-base PRIVATE ggml-backend-dl-rust)
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")
     target_link_libraries(ggml PRIVATE dl)

@@ -1,0 +1,11 @@
+[package]
+name = "llama-rpc-server-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+
+[[bin]]
+name = "rpc-server"
+path = "src/main.rs"

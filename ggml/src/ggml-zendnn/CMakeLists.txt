@@ -1,5 +1,6 @@
+set_source_files_properties(ggml-zendnn.cpp.inc PROPERTIES LANGUAGE CXX)
 ggml_add_backend_library(ggml-zendnn
-                         ggml-zendnn.cpp)
+                         ggml-zendnn.cpp.inc)
 
 if (NOT DEFINED ZENDNN_ROOT OR ZENDNN_ROOT STREQUAL "")
     set(ZENDNN_ROOT "$ENV{ZENDNN_ROOT}")

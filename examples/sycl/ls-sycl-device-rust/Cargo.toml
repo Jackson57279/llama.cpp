@@ -1,0 +1,11 @@
+[package]
+name = "llama-ls-sycl-device-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+
+[[bin]]
+name = "llama-ls-sycl-device"
+path = "src/main.rs"

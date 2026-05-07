@@ -3,45 +3,11 @@
 find_package(Threads REQUIRED)
 
 add_library(mtmd
-            mtmd.cpp
-            mtmd-audio.cpp
-            mtmd-image.cpp
-            mtmd.h
-            mtmd-helper.cpp
-            mtmd-helper.h
-            clip.cpp
-            clip.h
-            clip-impl.h
-            clip-model.h
-            clip-graph.h
-            models/models.h
-            models/cogvlm.cpp
-            models/conformer.cpp
-            models/dotsocr.cpp
-            models/gemma4a.cpp
-            models/gemma4v.cpp
-            models/glm4v.cpp
-            models/hunyuanocr.cpp
-            models/internvl.cpp
-            models/kimivl.cpp
-            models/kimik25.cpp
-            models/nemotron-v2-vl.cpp
-            models/llama4.cpp
-            models/llava.cpp
-            models/minicpmv.cpp
-            models/paddleocr.cpp
-            models/pixtral.cpp
-            models/qwen2vl.cpp
-            models/qwen3vl.cpp
-            models/qwen3a.cpp
-            models/step3vl.cpp
-            models/siglip.cpp
-            models/whisper-enc.cpp
-            models/deepseekocr.cpp
-            models/mobilenetv5.cpp
-            models/youtuvl.cpp
-            models/yasa2.cpp
+            mtmd.cpp.inc
+            mtmd.h.inc
             )
+set_source_files_properties(mtmd.cpp.inc PROPERTIES LANGUAGE CXX)
+set_source_files_properties(mtmd.h.inc PROPERTIES HEADER_FILE_ONLY TRUE)
 
 set_target_properties(mtmd PROPERTIES
     VERSION ${LLAMA_INSTALL_VERSION}
@@ -63,27 +29,22 @@ if (BUILD_SHARED_LIBS)
 endif()
 
 set(MTMD_PUBLIC_HEADERS
-    ${CMAKE_CURRENT_SOURCE_DIR}/mtmd.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/mtmd-helper.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/mtmd.h.inc
     )
 
 set_target_properties(mtmd
     PROPERTIES
     PUBLIC_HEADER "${MTMD_PUBLIC_HEADERS}")
 
-set_target_properties(mtmd
-    PROPERTIES
-    PRIVATE_HEADER debug/mtmd-debug.h)
-
 install(TARGETS mtmd LIBRARY PUBLIC_HEADER)
 
 if (NOT MSVC)
-    # for stb_image.h and miniaudio.h
+    # for stb_image.h.inc and miniaudio.h.inc
     target_compile_options(mtmd PRIVATE -Wno-cast-qual)
 endif()
 
 if (ANDROID)
-    # miniaudio.h defines ma_android_sdk_version() without a prior prototype
+    # miniaudio.h.inc defines ma_android_sdk_version() without a prior prototype
     target_compile_options(mtmd PRIVATE -Wno-missing-prototypes)
 endif()
 
@@ -101,22 +62,67 @@ if (TARGET mtmd)
     endif()
 endif()
 
-add_executable(llama-llava-cli    deprecation-warning.cpp)
-add_executable(llama-gemma3-cli   deprecation-warning.cpp)
-add_executable(llama-minicpmv-cli deprecation-warning.cpp)
-add_executable(llama-qwen2vl-cli  deprecation-warning.cpp)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+
+set(MTMD_DEPRECATION_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/deprecation-warning-rust/Cargo.toml)
+set(MTMD_DEPRECATION_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/mtmd-deprecation-warning)
+set(MTMD_DEPRECATION_BIN ${MTMD_DEPRECATION_TARGET_DIR}/debug/mtmd-deprecation-warning${CMAKE_EXECUTABLE_SUFFIX})
+set(MTMD_DEPRECATION_OUTPUTS
+    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llama-llava-cli${CMAKE_EXECUTABLE_SUFFIX}
+    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llama-gemma3-cli${CMAKE_EXECUTABLE_SUFFIX}
+    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llama-minicpmv-cli${CMAKE_EXECUTABLE_SUFFIX}
+    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llama-qwen2vl-cli${CMAKE_EXECUTABLE_SUFFIX}
+)
+
+add_custom_command(
+    OUTPUT ${MTMD_DEPRECATION_OUTPUTS}
+    COMMAND ${CARGO_EXECUTABLE} build --manifest-path ${MTMD_DEPRECATION_MANIFEST} --target-dir ${MTMD_DEPRECATION_TARGET_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy ${MTMD_DEPRECATION_BIN} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llama-llava-cli${CMAKE_EXECUTABLE_SUFFIX}
+    COMMAND ${CMAKE_COMMAND} -E copy ${MTMD_DEPRECATION_BIN} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llama-gemma3-cli${CMAKE_EXECUTABLE_SUFFIX}
+    COMMAND ${CMAKE_COMMAND} -E copy ${MTMD_DEPRECATION_BIN} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llama-minicpmv-cli${CMAKE_EXECUTABLE_SUFFIX}
+    COMMAND ${CMAKE_COMMAND} -E copy ${MTMD_DEPRECATION_BIN} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llama-qwen2vl-cli${CMAKE_EXECUTABLE_SUFFIX}
+    DEPENDS
+        ${MTMD_DEPRECATION_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/deprecation-warning-rust/src/lib.rs
+        ${CMAKE_CURRENT_SOURCE_DIR}/deprecation-warning-rust/src/main.rs
+)
+
+add_custom_target(llama-llava-cli    ALL DEPENDS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llama-llava-cli${CMAKE_EXECUTABLE_SUFFIX})
+add_custom_target(llama-gemma3-cli   ALL DEPENDS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llama-gemma3-cli${CMAKE_EXECUTABLE_SUFFIX})
+add_custom_target(llama-minicpmv-cli ALL DEPENDS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llama-minicpmv-cli${CMAKE_EXECUTABLE_SUFFIX})
+add_custom_target(llama-qwen2vl-cli  ALL DEPENDS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llama-qwen2vl-cli${CMAKE_EXECUTABLE_SUFFIX})
 
 set(TARGET llama-mtmd-cli)
-add_executable         (${TARGET} mtmd-cli.cpp)
-set_target_properties  (${TARGET} PROPERTIES OUTPUT_NAME llama-mtmd-cli)
+set(MTMD_CLI_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/cli-rust/Cargo.toml)
+set(MTMD_CLI_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/mtmd-cli)
+set(MTMD_CLI_BIN ${MTMD_CLI_TARGET_DIR}/debug/llama-mtmd-cli${CMAKE_EXECUTABLE_SUFFIX})
+set(MTMD_CLI_OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llama-mtmd-cli${CMAKE_EXECUTABLE_SUFFIX})
+
+add_custom_command(
+    OUTPUT ${MTMD_CLI_OUTPUT}
+    COMMAND ${CARGO_EXECUTABLE} build --manifest-path ${MTMD_CLI_MANIFEST} --target-dir ${MTMD_CLI_TARGET_DIR} --bin llama-mtmd-cli
+    COMMAND ${CMAKE_COMMAND} -E copy ${MTMD_CLI_BIN} ${MTMD_CLI_OUTPUT}
+    DEPENDS
+        ${MTMD_CLI_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/cli-rust/src/main.rs
+)
+add_custom_target(${TARGET} ALL DEPENDS ${MTMD_CLI_OUTPUT})
 if(LLAMA_TOOLS_INSTALL)
-    install(TARGETS ${TARGET} RUNTIME)
+    install(PROGRAMS ${MTMD_CLI_OUTPUT} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
-target_link_libraries  (${TARGET} PRIVATE llama-common mtmd Threads::Threads)
-target_compile_features(${TARGET} PRIVATE cxx_std_17)
 
 # mtmd-debug tool
-add_executable(llama-mtmd-debug debug/mtmd-debug.cpp)
-set_target_properties(llama-mtmd-debug PROPERTIES OUTPUT_NAME llama-mtmd-debug)
-target_link_libraries(llama-mtmd-debug PRIVATE llama-common mtmd Threads::Threads)
-target_compile_features(llama-mtmd-debug PRIVATE cxx_std_17)
+set(MTMD_DEBUG_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/debug-rust/Cargo.toml)
+set(MTMD_DEBUG_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/mtmd-debug)
+set(MTMD_DEBUG_BIN ${MTMD_DEBUG_TARGET_DIR}/debug/llama-mtmd-debug${CMAKE_EXECUTABLE_SUFFIX})
+set(MTMD_DEBUG_OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/llama-mtmd-debug${CMAKE_EXECUTABLE_SUFFIX})
+
+add_custom_command(
+    OUTPUT ${MTMD_DEBUG_OUTPUT}
+    COMMAND ${CARGO_EXECUTABLE} build --manifest-path ${MTMD_DEBUG_MANIFEST} --target-dir ${MTMD_DEBUG_TARGET_DIR} --bin llama-mtmd-debug
+    COMMAND ${CMAKE_COMMAND} -E copy ${MTMD_DEBUG_BIN} ${MTMD_DEBUG_OUTPUT}
+    DEPENDS
+        ${MTMD_DEBUG_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/debug-rust/src/main.rs
+)
+add_custom_target(llama-mtmd-debug ALL DEPENDS ${MTMD_DEBUG_OUTPUT})
