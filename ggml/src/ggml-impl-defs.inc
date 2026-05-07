@@ -32,13 +32,90 @@ void ggml_print_backtrace(void);
 
 uint64_t ggml_graph_next_uid(void);
 bool ggml_op_is_empty_rust(int op);
+bool ggml_is_view_op_rust(int op);
 size_t ggml_bitset_size_rust(size_t n);
+bool ggml_are_same_layout_rust(
+        int a_type,
+        int b_type,
+        const int64_t * a_ne,
+        const int64_t * b_ne,
+        const size_t * a_nb,
+        const size_t * b_nb,
+        size_t n_dims);
+int32_t ggml_get_op_params_i32_rust(const int32_t * op_params, uint32_t i);
+float ggml_get_op_params_f32_rust(const int32_t * op_params, uint32_t i);
+void ggml_set_op_params_i32_rust(int32_t * op_params, uint32_t i, int32_t value);
+void ggml_set_op_params_f32_rust(int32_t * op_params, uint32_t i, float value);
 size_t ggml_aligned_offset_rust(const void * buffer, size_t offset, size_t alignment);
 int ggml_get_node_buffer_id_rust(const int * node_buffer_ids, int index);
 bool ggml_buffer_address_less_rust(int a_chunk, size_t a_offset, int b_chunk, size_t b_offset);
 bool ggml_isinf_fp16_rust(uint16_t value);
 bool ggml_isnan_fp16_rust(uint16_t value);
 bool ggml_is_invalid_e8m0_rust(uint8_t value);
+int ggml_float_validation_kind_rust(float value);
+int ggml_int_pair_compare_rust(const void * left, const void * right);
+int ggml_float_pair_compare_rust(const void * left, const void * right);
+size_t ggml_graph_nbytes_rust(
+        size_t size,
+        bool grads,
+        size_t hash_size,
+        size_t cgraph_size,
+        size_t tensor_ptr_size,
+        size_t int32_size,
+        size_t bitset_size,
+        size_t bitset_t_size);
+int ggml_iq2_find_best_neighbour_rust(
+        const uint16_t * neighbours,
+        const uint64_t * grid,
+        const float * xval,
+        const float * weight,
+        float scale,
+        int8_t * out_l);
+int ggml_iq3_find_best_neighbour_rust(
+        const uint16_t * neighbours,
+        const uint32_t * grid,
+        const float * xval,
+        const float * weight,
+        float scale,
+        int8_t * out_l);
+int ggml_iq1_find_best_neighbour2_rust(
+        const uint16_t * neighbours,
+        const uint64_t * grid,
+        const float * xval,
+        const float * weight,
+        float scale,
+        const float * xg,
+        int8_t * out_l,
+        int ngrid);
+int64_t ggml_calc_conv_output_size_rust(int64_t ins, int64_t ks, int s, int p, int d);
+int64_t ggml_calc_conv_transpose_1d_output_size_rust(int64_t ins, int64_t ks, int s, int p, int d);
+int64_t ggml_calc_conv_transpose_output_size_rust(int64_t ins, int64_t ks, int s, int p);
+int64_t ggml_calc_pool_output_size_rust(int64_t ins, int ks, int s, float p);
+float ggml_rope_yarn_corr_dim_rust(int n_dims, int n_ctx_orig, float n_rot, float base);
+int ggml_nearest_int_rust(float fval);
+int ggml_iq2_data_index_rust(int type);
+int ggml_iq2_grid_size_rust(int type);
+int ggml_iq3_data_index_rust(int grid_size);
+int ggml_best_index_int8_rust(int n, const int8_t * val, float x);
+int ggml_best_index_mxfp4_rust(float x, float e);
+int ggml_up32_rust(int n);
+int ggml_up_rust(int n, int m);
+float ggml_compute_softplus_f32_rust(float input);
+bool ggml_bitset_get_rust(const uint32_t * bitset, size_t i);
+void ggml_bitset_set_rust(uint32_t * bitset, size_t i);
+void ggml_bitset_clear_rust(uint32_t * bitset, size_t i);
+size_t ggml_hash_rust(const void * ptr);
+bool ggml_impl_is_view_rust(const void * view_src);
+bool ggml_hash_contains_rust(const void * hash_set, void * key);
+size_t ggml_hash_find_rust(const void * hash_set, const void * key);
+size_t ggml_hash_insert_rust(void * hash_set, void * key);
+size_t ggml_hash_find_or_insert_rust(void * hash_set, void * key);
+int32_t ggml_node_get_use_count_rust(const void * node, const void * hash_set, const int32_t * use_counts);
+bool ggml_node_has_n_uses_rust(int32_t use_count, int32_t n_uses, const void * view_src, int flags, int output_flag);
+float ggml_e8m0_to_fp32_rust(uint8_t x);
+float ggml_e8m0_to_fp32_half_rust(uint8_t x);
+float ggml_ue4m3_to_fp32_rust(uint8_t x);
+uint8_t ggml_fp32_to_ue4m3_rust(float x);
 
 #ifndef MIN
 #    define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -65,45 +142,24 @@ bool ggml_is_invalid_e8m0_rust(uint8_t value);
     #endif
 #endif
 
-static inline int ggml_up32(int n) {
-    return (n + 31) & ~31;
-}
+#define ggml_up32(n) ggml_up32_rust(n)
 
 //static inline int ggml_up64(int n) {
 //    return (n + 63) & ~63;
 //}
 
-static inline int ggml_up(int n, int m) {
-    // assert m is a power of 2
-    GGML_ASSERT((m & (m - 1)) == 0);
-    return (n + m - 1) & ~(m - 1);
-}
+#define ggml_up(n, m) ggml_up_rust(n, m)
 
 // TODO: move to ggml.h.inc? (won't be able to inline)
 static bool ggml_are_same_layout(const struct ggml_tensor * a, const struct ggml_tensor * b) {
-    if (a->type != b->type) {
-        return false;
-    }
-    for (int i = 0; i < GGML_MAX_DIMS; i++) {
-        if (a->ne[i] != b->ne[i]) {
-            return false;
-        }
-        if (a->nb[i] != b->nb[i]) {
-            return false;
-        }
-    }
-    return true;
+    return ggml_are_same_layout_rust((int) a->type, (int) b->type, a->ne, b->ne, a->nb, b->nb, GGML_MAX_DIMS);
 }
 
 #define ggml_op_is_empty(op) ggml_op_is_empty_rust((int) (op))
 
-static inline bool ggml_impl_is_view(const struct ggml_tensor * t) {
-    return t->view_src != NULL;
-}
+#define ggml_impl_is_view(t) ggml_impl_is_view_rust((t)->view_src)
 
-static inline float ggml_compute_softplus_f32(float input) {
-    return (input > 20.0f) ? input : logf(1 + expf(input));
-}
+#define ggml_compute_softplus_f32(input) ggml_compute_softplus_f32_rust(input)
 //
 // logging
 //
@@ -149,22 +205,22 @@ static void ggml_set_op_params(struct ggml_tensor * tensor, const void * params,
 
 static int32_t ggml_get_op_params_i32(const struct ggml_tensor * tensor, uint32_t i) {
     assert(i < GGML_MAX_OP_PARAMS / sizeof(int32_t));
-    return ((const int32_t *)(tensor->op_params))[i];
+    return ggml_get_op_params_i32_rust(tensor->op_params, i);
 }
 
 static float ggml_get_op_params_f32(const struct ggml_tensor * tensor, uint32_t i) {
     assert(i < GGML_MAX_OP_PARAMS / sizeof(float));
-    return ((const float *)(tensor->op_params))[i];
+    return ggml_get_op_params_f32_rust(tensor->op_params, i);
 }
 
 static void ggml_set_op_params_i32(struct ggml_tensor * tensor, uint32_t i, int32_t value) {
     assert(i < GGML_MAX_OP_PARAMS / sizeof(int32_t));
-    ((int32_t *)(tensor->op_params))[i] = value;
+    ggml_set_op_params_i32_rust(tensor->op_params, i, value);
 }
 
 static void ggml_set_op_params_f32(struct ggml_tensor * tensor, uint32_t i, float value) {
     assert(i < GGML_MAX_OP_PARAMS / sizeof(float));
-    ((float *)(tensor->op_params))[i] = value;
+    ggml_set_op_params_f32_rust(tensor->op_params, i, value);
 }
 
 struct ggml_map_custom1_op_params {
@@ -201,17 +257,11 @@ static_assert(sizeof(ggml_bitset_t) == 4, "bitset_t constants must be updated");
 
 #define ggml_bitset_size(n) ggml_bitset_size_rust(n)
 
-static inline bool ggml_bitset_get(const ggml_bitset_t * bitset, size_t i) {
-    return !!(bitset[i >> BITSET_SHR] & (1u << (i & BITSET_MASK)));
-}
+#define ggml_bitset_get(bitset, i) ggml_bitset_get_rust(bitset, i)
 
-static inline void ggml_bitset_set(ggml_bitset_t * bitset, size_t i) {
-    bitset[i >> BITSET_SHR] |= (1u << (i & BITSET_MASK));
-}
+#define ggml_bitset_set(bitset, i) ggml_bitset_set_rust(bitset, i)
 
-static inline void ggml_bitset_clear(ggml_bitset_t * bitset, size_t i) {
-    bitset[i >> BITSET_SHR] &= ~(1u << (i & BITSET_MASK));
-}
+#define ggml_bitset_clear(bitset, i) ggml_bitset_clear_rust(bitset, i)
 
 // hash set
 
@@ -233,85 +283,12 @@ size_t ggml_hash_size(size_t min_sz);
 // remove all elements from the hash set
 void ggml_hash_set_reset(struct ggml_hash_set * hash_set);
 
-// returns true if key is in the hash set
-static bool ggml_hash_contains(const struct ggml_hash_set * hash_set, struct ggml_tensor * key);
-
-// returns GGML_HASHSET_FULL if table is full, otherwise the current index of the key or where it should be inserted
-static size_t ggml_hash_find(const struct ggml_hash_set * hash_set, const struct ggml_tensor * key);
-
-// returns GGML_HASHSET_ALREADY_EXISTS if key already exists, index otherwise, asserts if table is full
-static size_t ggml_hash_insert(struct ggml_hash_set * hash_set, struct ggml_tensor * key);
-
-// return index, asserts if table is full
-static size_t ggml_hash_find_or_insert(struct ggml_hash_set * hash_set, struct ggml_tensor * key);
-
 // hash function for ggml_tensor
-static inline size_t ggml_hash(const struct ggml_tensor * p) {
-    // the last 4 bits are always zero due to alignment
-    return (size_t)(uintptr_t)p >> 4;
-}
-
-static size_t ggml_hash_find(const struct ggml_hash_set * hash_set, const struct ggml_tensor * key) {
-    size_t h = ggml_hash(key) % hash_set->size;
-
-    // linear probing
-    size_t i = h;
-    while (ggml_bitset_get(hash_set->used, i) && hash_set->keys[i] != key) {
-        i = (i + 1) % hash_set->size;
-        if (i == h) {
-            // visited all hash table entries -> not found
-            return GGML_HASHSET_FULL;
-        }
-    }
-    return i;
-}
-
-static bool ggml_hash_contains(const struct ggml_hash_set * hash_set, struct ggml_tensor * key) {
-    size_t i = ggml_hash_find(hash_set, key);
-    return i != GGML_HASHSET_FULL && ggml_bitset_get(hash_set->used, i);
-}
-
-static size_t ggml_hash_insert(struct ggml_hash_set * hash_set, struct ggml_tensor * key) {
-    size_t h = ggml_hash(key) % hash_set->size;
-
-    // linear probing
-    size_t i = h;
-    do {
-        if (!ggml_bitset_get(hash_set->used, i)) {
-            ggml_bitset_set(hash_set->used, i);
-            hash_set->keys[i] = key;
-            return i;
-        }
-        if (hash_set->keys[i] == key) {
-            return GGML_HASHSET_ALREADY_EXISTS;
-        }
-        i = (i + 1) % hash_set->size;
-    } while (i != h);
-
-    // visited all hash table entries -> not found
-    GGML_ABORT("fatal error");
-}
-
-static size_t ggml_hash_find_or_insert(struct ggml_hash_set * hash_set, struct ggml_tensor * key) {
-    size_t h = ggml_hash(key) % hash_set->size;
-
-    // linear probing
-    size_t i = h;
-    do {
-        if (!ggml_bitset_get(hash_set->used, i)) {
-            ggml_bitset_set(hash_set->used, i);
-            hash_set->keys[i] = key;
-            return i;
-        }
-        if (hash_set->keys[i] == key) {
-            return i;
-        }
-        i = (i + 1) % hash_set->size;
-    } while (i != h);
-
-    // visited all hash table entries -> not found
-    GGML_ABORT("fatal error");
-}
+#define ggml_hash(p) ggml_hash_rust(p)
+#define ggml_hash_contains(hash_set, key) ggml_hash_contains_rust(hash_set, key)
+#define ggml_hash_find(hash_set, key) ggml_hash_find_rust(hash_set, key)
+#define ggml_hash_insert(hash_set, key) ggml_hash_insert_rust(hash_set, key)
+#define ggml_hash_find_or_insert(hash_set, key) ggml_hash_find_or_insert_rust(hash_set, key)
 
 // computation graph
 
@@ -431,121 +408,20 @@ static inline ggml_fp16_t ggml_compute_fp32_to_fp16(float f) {
 #define GGML_FP16_TO_FP32(x) GGML_COMPUTE_FP16_TO_FP32(x)
 #define GGML_FP32_TO_FP16(x) GGML_COMPUTE_FP32_TO_FP16(x)
 
-static inline float ggml_e8m0_to_fp32(uint8_t x) {
-    uint32_t bits;  // Stores the raw bit representation of the float
-
-    // Handle special case for minimum exponent (denormalized float)
-    if (x == 0) {
-        // Bit pattern for 2^(-127):
-        // - Sign bit: 0 (positive)
-        // - Exponent: 0 (denormalized number)
-        // - Mantissa: 0x400000 (0.5 in fractional form)
-        // Value = 0.5 * 2^(-126) = 2^(-127)
-        bits = 0x00400000;
-    }
-    // note: disabled as we don't need to handle NaNs
-    //// Handle special case for NaN (all bits set)
-    //else if (x == 0xFF) {
-    //    // Standard quiet NaN pattern:
-    //    // - Sign bit: 0
-    //    // - Exponent: all 1s (0xFF)
-    //    // - Mantissa: 0x400000 (quiet NaN flag)
-    //    bits = 0x7FC00000;
-    //}
-    // Normalized values (most common case)
-    else {
-        // Construct normalized float by shifting exponent into position:
-        // - Exponent field: 8 bits (positions 30-23)
-        // - Mantissa: 0 (implicit leading 1)
-        // Value = 2^(x - 127)
-        bits = (uint32_t) x << 23;
-    }
-
-    float result;  // Final float value
-                   // Safely reinterpret bit pattern as float without type-punning issues
-    memcpy(&result, &bits, sizeof(float));
-    return result;
-}
+#define ggml_e8m0_to_fp32(x) ggml_e8m0_to_fp32_rust(x)
 
 // Equal to ggml_e8m0_to_fp32/2
 // Useful with MXFP4 quantization since the E0M2 values are doubled
-static inline float ggml_e8m0_to_fp32_half(uint8_t x) {
-    uint32_t bits;
-
-    // For x < 2: use precomputed denormal patterns
-    if (x < 2) {
-        // 0x00200000 = 2^(-128), 0x00400000 = 2^(-127)
-        bits = 0x00200000 << x;
-    }
-    // For x >= 2: normalized exponent adjustment
-    else {
-        // 0.5 * 2^(x-127) = 2^(x-128) = normalized with exponent (x-1)
-        bits = (uint32_t)(x - 1) << 23;
-    }
-    // Note: NaNs are not handled here
-
-    float result;
-    memcpy(&result, &bits, sizeof(float));
-    return result;
-}
+#define ggml_e8m0_to_fp32_half(x) ggml_e8m0_to_fp32_half_rust(x)
 
 #define GGML_E8M0_TO_FP32(x) ggml_e8m0_to_fp32(x)
 #define GGML_E8M0_TO_FP32_HALF(x) ggml_e8m0_to_fp32_half(x)
 
 // UE4M3: unsigned, 4 exp bits (bias=7), 3 mantissa bits
 // Returns value * 0.5 to match kvalues_mxfp4 convention (kvalues = 2 * E2M1_float)
-static inline float ggml_ue4m3_to_fp32(uint8_t x) {
-    if (x == 0 || x == 0x7F) {
-        return 0.0f;
-    }
-    int   exp = (x >> 3) & 0xF;
-    int   man = x & 0x7;
-    float raw;
-    if (exp == 0) {
-        raw = ldexpf((float) man, -9);
-    } else {
-        raw = ldexpf(1.0f + (float) man / 8.0f, exp - 7);
-    }
-    return raw * 0.5f;
-}
+#define ggml_ue4m3_to_fp32(x) ggml_ue4m3_to_fp32_rust(x)
 
-static inline uint8_t ggml_fp32_to_ue4m3(float x) {
-    if (!(x > 0.0f)) {
-        return 0;
-    }
-    if (x > 448.0f) {
-        x = 448.0f;
-    }
-    uint32_t bits;
-    memcpy(&bits, &x, 4);
-    int fp32_exp  = ((bits >> 23) & 0xFF) - 127;
-    int fp32_man  = (bits >> 20) & 0x7;
-    int ue4m3_exp = fp32_exp + 7;
-    if (ue4m3_exp <= 0) {
-        // subnormal: value = man * 2^-9, man = round(x * 2^9)
-        int man = (int) (x * 512.0f + 0.5f);
-        if (man > 7) {
-            man = 7;
-        }
-        if (man < 1) {
-            return 0;
-        }
-        return (uint8_t) man;
-    }
-    if (ue4m3_exp >= 15) {
-        return 0x7E;
-    }
-    int round_bit = (bits >> 19) & 1;
-    int ue4m3_man = fp32_man + round_bit;
-    if (ue4m3_man > 7) {
-        ue4m3_man = 0;
-        ue4m3_exp++;
-        if (ue4m3_exp >= 15) {
-            return 0x7E;
-        }
-    }
-    return (uint8_t) ((ue4m3_exp << 3) | ue4m3_man);
-}
+#define ggml_fp32_to_ue4m3(x) ggml_fp32_to_ue4m3_rust(x)
 
 /**
  * Converts brain16 to float32.
@@ -623,36 +499,19 @@ static inline ggml_bf16_t ggml_compute_fp32_to_bf16(float s) {
 
 static inline int32_t ggml_node_get_use_count(const struct ggml_cgraph * cgraph, int node_idx) {
     const struct ggml_tensor * node = cgraph->nodes[node_idx];
-
-    size_t hash_pos = ggml_hash_find(&cgraph->visited_hash_set, node);
-    if (!ggml_bitset_get(cgraph->visited_hash_set.used, hash_pos)) {
-        return 0;
-    }
-    return cgraph->use_counts[hash_pos];
+    return ggml_node_get_use_count_rust(node, &cgraph->visited_hash_set, cgraph->use_counts);
 }
 
 // return true if the node's results are only used by N other nodes
 // and can be fused into their calculations.
 static inline bool ggml_node_has_n_uses(const struct ggml_cgraph * cgraph, int node_idx, int32_t n_uses) {
     const struct ggml_tensor * node = cgraph->nodes[node_idx];
-
-    // check the use count against how many we're replacing
-    if (ggml_node_get_use_count(cgraph, node_idx) != n_uses) {
-        return false;
-    }
-
-    // if node is a view, some other node might be using the intermediate result
-    // via the view source.
-    if (node->view_src) {
-        return false;
-    }
-
-    // If the user requested output for the node, can't fuse
-    if (node->flags & GGML_TENSOR_FLAG_OUTPUT) {
-        return false;
-    }
-
-    return true;
+    return ggml_node_has_n_uses_rust(
+            ggml_node_get_use_count(cgraph, node_idx),
+            n_uses,
+            node->view_src,
+            node->flags,
+            GGML_TENSOR_FLAG_OUTPUT);
 }
 
 // Returns true if nodes with indices { node_idxs } are the sequence of ggml_ops in ops[]
