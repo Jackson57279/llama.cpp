@@ -1,8 +1,8 @@
 message(STATUS "Using RPC backend")
 
+set_source_files_properties(ggml-rpc.cpp.inc PROPERTIES LANGUAGE CXX)
 ggml_add_backend_library(ggml-rpc
-                         ggml-rpc.cpp
-                         transport.cpp
+                         ggml-rpc.cpp.inc
                         )
 
 if (WIN32)

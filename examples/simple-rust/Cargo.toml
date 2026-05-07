@@ -1,0 +1,13 @@
+[package]
+name = "llama-simple-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[build-dependencies]
+
+[dependencies]
+
+[[bin]]
+name = "llama-simple"
+path = "src/main.rs"

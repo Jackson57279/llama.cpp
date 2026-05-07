@@ -1,0 +1,13 @@
+[package]
+name = "llama-lookup-stats-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "llama-lookup-stats"
+path = "src/main.rs"
+
+[dependencies]
+llama-lookup-merge = { path = "../lookup-merge-rust" }
+llama-simple-rust = { path = "../simple-rust" }

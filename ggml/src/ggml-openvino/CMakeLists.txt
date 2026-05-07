@@ -3,8 +3,9 @@ find_package(OpenCL REQUIRED)
 
 include("${OpenVINO_DIR}/../3rdparty/tbb/lib/cmake/TBB/TBBConfig.cmake")
 
-file(GLOB_RECURSE GGML_HEADERS_OPENVINO "*.h" "*.hpp")
-file(GLOB_RECURSE GGML_SOURCES_OPENVINO "*.cpp")
+set(GGML_HEADERS_OPENVINO)
+set(GGML_SOURCES_OPENVINO ggml-openvino.cpp.inc)
+set_source_files_properties(${GGML_SOURCES_OPENVINO} PROPERTIES LANGUAGE CXX)
 
 ggml_add_backend_library(ggml-openvino
     ${GGML_SOURCES_OPENVINO}

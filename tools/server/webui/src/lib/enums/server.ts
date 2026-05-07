@@ -9,7 +9,7 @@ export enum ServerRole {
 }
 
 /**
- * Model status enum - matches tools/server/server-models.h from C++ server
+ * Model status enum - matches server_model_status in the C++ server
  * Used as the `value` field in the status object from /models endpoint
  */
 export enum ServerModelStatus {

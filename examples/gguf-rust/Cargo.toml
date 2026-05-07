@@ -1,0 +1,9 @@
+[package]
+name = "llama-gguf-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "llama-gguf"
+path = "src/main.rs"

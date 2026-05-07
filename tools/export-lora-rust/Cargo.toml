@@ -1,0 +1,9 @@
+[package]
+name = "llama-export-lora-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "llama-export-lora"
+path = "src/main.rs"

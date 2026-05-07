@@ -3,9 +3,10 @@ find_package(Python3 REQUIRED)
 
 set(TARGET_NAME ggml-opencl)
 
+set_source_files_properties(ggml-opencl.cpp.inc PROPERTIES LANGUAGE CXX)
 ggml_add_backend_library(${TARGET_NAME}
-                         ggml-opencl.cpp
-                         ../../include/ggml-opencl.h)
+                         ggml-opencl.cpp.inc
+                         ../../include/ggml-opencl.h.inc)
 target_link_libraries(${TARGET_NAME} PRIVATE ${OpenCL_LIBRARIES})
 target_include_directories(${TARGET_NAME} PRIVATE ${OpenCL_INCLUDE_DIRS})
 

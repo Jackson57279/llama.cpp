@@ -1,0 +1,11 @@
+[package]
+name = "llama-q8dot-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+
+[[bin]]
+name = "llama-q8dot"
+path = "src/main.rs"

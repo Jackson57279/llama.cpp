@@ -13,31 +13,32 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR})
 
 set(HTP_LIB ggml-htp-${DSP_VERSION})
-
-add_library(${HTP_LIB} SHARED
-    main.c
+set(HTP_SOURCES
+    main.inc
     htp_iface_skel.c
-    worker-pool.c
-    hex-dma.c
-    matmul-ops.c
-    binary-ops.c
-    unary-ops.c
-    sum-rows-ops.c
-    softmax-ops.c
-    act-ops.c
-    rope-ops.c
-    flash-attn-ops.c
-    set-rows-ops.c
-    get-rows-ops.c
-    cpy-ops.c
-    repeat-ops.c
-    argsort-ops.c
-    ssm-conv.c
-    cumsum-ops.c
-    fill-ops.c
-    diag-ops.c
-    solve-tri-ops.c
+    matmul-ops.inc
+    binary-ops.inc
+    unary-ops.inc
+    sum-rows-ops.inc
+    softmax-ops.inc
+    act-ops.inc
+    rope-ops.inc
+    flash-attn-ops.inc
+    set-rows-ops.inc
+    get-rows-ops.inc
+    cpy-ops.inc
+    repeat-ops.inc
+    argsort-ops.inc
+    ssm-conv.inc
+    cumsum-ops.inc
+    fill-ops.inc
+    diag-ops.inc
+    solve-tri-ops.inc
 )
+
+set_source_files_properties(${HTP_SOURCES} PROPERTIES LANGUAGE C)
+
+add_library(${HTP_LIB} SHARED ${HTP_SOURCES})
 
 target_compile_definitions(${HTP_LIB} PRIVATE
     $<IF:$<BOOL:${HEXAGON_HTP_DEBUG}>,HTP_DEBUG=1,NDEBUG=1>
@@ -54,16 +55,17 @@ set(HTP_HMX_VERSIONS v73 v75 v79 v81)
 list(FIND HTP_HMX_VERSIONS ${DSP_VERSION} _hmx_idx)
 
 if (_hmx_idx GREATER_EQUAL 0)
-    target_sources(${HTP_LIB} PRIVATE
-        hmx-queue.c
-        hmx-matmul-ops.c
-        hmx-flash-attn-ops.c
+    set(HTP_HMX_SOURCES
+        hmx-matmul-ops.inc
+        hmx-flash-attn-ops.inc
     )
+    set_source_files_properties(${HTP_HMX_SOURCES} PROPERTIES LANGUAGE C)
+    target_sources(${HTP_LIB} PRIVATE ${HTP_HMX_SOURCES})
 
     # -mhmx enables HMX instruction set (needed by files that include hmx-utils.h)
     set_source_files_properties(
-        hmx-matmul-ops.c
-        hmx-flash-attn-ops.c
+        hmx-matmul-ops.inc
+        hmx-flash-attn-ops.inc
         PROPERTIES COMPILE_OPTIONS "-mhmx"
     )
 

@@ -207,7 +207,7 @@ effectiveStdenv.mkDerivation (finalAttrs: {
   # if they haven't been added yet.
   postInstall = ''
     mkdir -p $out/include
-    cp $src/include/llama.h $out/include/
+    cp $src/include/llama.h.inc $out/include/
   '';
 
   meta = {

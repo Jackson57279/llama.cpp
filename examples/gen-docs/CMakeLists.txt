@@ -1,5 +1,19 @@
 set(TARGET llama-gen-docs)
-add_executable(${TARGET} gen-docs.cpp)
-install(TARGETS ${TARGET} RUNTIME)
-target_link_libraries(${TARGET} PRIVATE llama-common llama ${CMAKE_THREAD_LIBS_INIT})
-target_compile_features(${TARGET} PRIVATE cxx_std_17)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+
+set(GEN_DOCS_RUST_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/../gen-docs-rust/Cargo.toml)
+set(GEN_DOCS_RUST_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/gen-docs)
+set(GEN_DOCS_RUST_BIN ${GEN_DOCS_RUST_TARGET_DIR}/debug/llama-gen-docs${CMAKE_EXECUTABLE_SUFFIX})
+set(GEN_DOCS_RUST_OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+
+add_custom_command(
+    OUTPUT ${GEN_DOCS_RUST_OUTPUT}
+    COMMAND ${CARGO_EXECUTABLE} build --manifest-path ${GEN_DOCS_RUST_MANIFEST} --target-dir ${GEN_DOCS_RUST_TARGET_DIR} --bin llama-gen-docs
+    COMMAND ${CMAKE_COMMAND} -E copy ${GEN_DOCS_RUST_BIN} ${GEN_DOCS_RUST_OUTPUT}
+    DEPENDS
+        ${GEN_DOCS_RUST_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../gen-docs-rust/src/main.rs
+)
+
+add_custom_target(${TARGET} ALL DEPENDS ${GEN_DOCS_RUST_OUTPUT})
+install(PROGRAMS ${GEN_DOCS_RUST_OUTPUT} DESTINATION ${CMAKE_INSTALL_BINDIR})

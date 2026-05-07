@@ -115,7 +115,7 @@ Rust's ownership system eliminates entire classes of bugs at compile time. While
 
 ## Further Reading
 
-- [The Rust Book - Ownership](https://doc.rust-lang.org/book/ch04-00-understanding-ownership.html)
+- [The Rust Book - Ownership](https://doc.rust-lang.org/book/ch04-00-understanding-ownership.h.inctml)
 - [Rust by Example - Ownership](https://doc.rust-lang.org/rust-by-example/scope/move.html)
 - [Rustlings Exercises](https://github.com/rust-lang/rustlings)
 

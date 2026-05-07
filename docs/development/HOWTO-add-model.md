@@ -96,17 +96,17 @@ NOTE: Tensor names must end with `.weight` or `.bias` suffixes, that is the conv
 
 The model params and tensors layout must be defined in `llama.cpp` source files:
 1. Define a new `llm_arch` enum value in `src/llama-arch.h`.
-2. In `src/llama-arch.cpp`:
+2. In `src/llama.cpp`:
     - Add the architecture name to the `LLM_ARCH_NAMES` map.
     - Add the list of model tensors to `llm_get_tensor_names` (you may also need to update `LLM_TENSOR_NAMES`)
-3. Add any non-standard metadata loading in the `llama_model_loader` constructor in `src/llama-model-loader.cpp`.
-4. If the model has a RoPE operation, add a case for the architecture in `llama_model_rope_type` function in `src/llama-model.cpp`.
+3. Add any non-standard metadata loading in the `llama_model_loader` constructor in `src/llama.cpp`.
+4. If the model has a RoPE operation, add a case for the architecture in `llama_model_rope_type` function in `src/llama.cpp`.
 
 NOTE: The dimensions in `ggml` are typically in the reverse order of the `pytorch` dimensions.
 
 ### 3. Build the GGML graph implementation
 
-This is the funniest part, you have to provide the inference graph implementation of the new model architecture in `src/llama-model.cpp`.
+This is the funniest part, you have to provide the inference graph implementation of the new model architecture in `src/llama.cpp`.
 Create a new struct that inherits from `llm_graph_context` and implement the graph-building logic in its constructor.
 Have a look at existing implementations like `llm_build_llama`, `llm_build_dbrx` or `llm_build_bert`.
 Then, in the `llama_model::build_graph` method, add a case for your architecture to instantiate your new graph-building struct.
@@ -120,8 +120,8 @@ Note: to debug the inference graph: you can use [llama-eval-callback](/examples/
 If the new model supports multimodal inputs, you will need to add a new encoder definition in `libmtmd`. You can find more information about llama.cpp's multimodal support in [the docs](../multimodal.md) and in the `tools/mtmd` source directory.
 
 1. In the conversion script, make sure you add a subclass that extends `MmprojModel` or another class that inherits from the same base class.
-2. Add the encoder definition in `clip.cpp`.
-3. Implement the preprocessor in `mtmd.cpp`. In most cases, you can reuse an existing preprocessor.
+2. Add the encoder definition in `tools/mtmd/mtmd.cpp.inc`.
+3. Implement the preprocessor in `mtmd.cpp.inc`. In most cases, you can reuse an existing preprocessor.
 4. Implement the encoder GGML graph, either in a dedicated file if the model is truly different from existing ones, or by reusing an existing implementation (for example: siglip, pixtral, or qwen) and adding a model-specific projector.
 
 Note:
@@ -138,7 +138,7 @@ PyTorch implementations usually prefer explicitly calculating `freq_cis`/`sin`/`
 
 However, since `ggml_rope_ext` only provides a subset of the RoPE implementations that models use, converting models from PyTorch to llama.cpp may require some creative adaptations.
 
-For more information about `ggml_rope_ext`, please refer to the in-code documentation in `ggml.h`.
+For more information about `ggml_rope_ext`, please refer to the in-code documentation in `ggml.h.inc`.
 
 Examples:
 - `libmtmd` implements 2D RoPE with `GGML_ROPE_TYPE_NORMAL` ordering by splitting the input tensor in half, applying `ggml_rope_ext` separately to each half, then joining them back together using `ggml_concat`.

@@ -28,10 +28,11 @@ add_custom_command(
 
 add_custom_target(generate_shaders DEPENDS ${SHADER_HEADER})
 
+set_source_files_properties(ggml-webgpu.cpp.inc PROPERTIES LANGUAGE CXX)
 ggml_add_backend_library(ggml-webgpu
-    ggml-webgpu.cpp
+    ggml-webgpu.cpp.inc
     ${SHADER_HEADER}
-    ../../include/ggml-webgpu.h
+    ../../include/ggml-webgpu.h.inc
 )
 
 add_dependencies(ggml-webgpu generate_shaders)

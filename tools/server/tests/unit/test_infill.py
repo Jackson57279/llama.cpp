@@ -13,7 +13,7 @@ def test_infill_without_input_extra():
     global server
     server.start()
     res = server.make_request("POST", "/infill", data={
-        "input_prefix": "#include <cstdio>\n#include \"llama.h\"\n\nint main() {\n",
+        "input_prefix": "#include <cstdio>\n#include \"llama.h.inc\"\n\nint main() {\n",
         "prompt": "    int n_threads = llama_",
         "input_suffix": "}\n",
     })
@@ -26,10 +26,10 @@ def test_infill_with_input_extra():
     server.start()
     res = server.make_request("POST", "/infill", data={
         "input_extra": [{
-            "filename": "llama.h",
+            "filename": "llama.h.inc",
             "text": "LLAMA_API int32_t llama_n_threads();\n"
         }],
-        "input_prefix": "#include <cstdio>\n#include \"llama.h\"\n\nint main() {\n",
+        "input_prefix": "#include <cstdio>\n#include \"llama.h.inc\"\n\nint main() {\n",
         "prompt": "    int n_threads = llama_",
         "input_suffix": "}\n",
     })
@@ -49,7 +49,7 @@ def test_invalid_input_extra_req(input_extra):
     server.start()
     res = server.make_request("POST", "/infill", data={
         "input_extra": [input_extra],
-        "input_prefix": "#include <cstdio>\n#include \"llama.h\"\n\nint main() {\n",
+        "input_prefix": "#include <cstdio>\n#include \"llama.h.inc\"\n\nint main() {\n",
         "prompt": "    int n_threads = llama_",
         "input_suffix": "}\n",
     })
@@ -66,10 +66,10 @@ def test_with_qwen_model():
     server.start(timeout_seconds=600)
     res = server.make_request("POST", "/infill", data={
         "input_extra": [{
-            "filename": "llama.h",
+            "filename": "llama.h.inc",
             "text": "LLAMA_API int32_t llama_n_threads();\n"
         }],
-        "input_prefix": "#include <cstdio>\n#include \"llama.h\"\n\nint main() {\n",
+        "input_prefix": "#include <cstdio>\n#include \"llama.h.inc\"\n\nint main() {\n",
         "prompt": "    int n_threads = llama_",
         "input_suffix": "}\n",
     })

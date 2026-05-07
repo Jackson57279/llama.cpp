@@ -1,8 +1,25 @@
 set(TARGET rpc-server)
-add_executable(${TARGET} rpc-server.cpp)
-target_link_libraries(${TARGET} PRIVATE ggml)
-target_compile_features(${TARGET} PRIVATE cxx_std_17)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+
+set(RPC_SERVER_RUST_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/../rpc-rust/Cargo.toml)
+set(RPC_SERVER_RUST_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/rpc-server)
+set(RPC_SERVER_RUST_BIN ${RPC_SERVER_RUST_TARGET_DIR}/debug/rpc-server${CMAKE_EXECUTABLE_SUFFIX})
+set(RPC_SERVER_RUST_OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+
+add_custom_command(
+    OUTPUT ${RPC_SERVER_RUST_OUTPUT}
+    COMMAND ${CMAKE_COMMAND} -E env LLAMA_CPP_LIB_DIR=$<TARGET_FILE_DIR:ggml>
+            ${CARGO_EXECUTABLE} build --manifest-path ${RPC_SERVER_RUST_MANIFEST} --target-dir ${RPC_SERVER_RUST_TARGET_DIR} --bin rpc-server
+    COMMAND ${CMAKE_COMMAND} -E copy ${RPC_SERVER_RUST_BIN} ${RPC_SERVER_RUST_OUTPUT}
+    DEPENDS
+        ggml
+        ${RPC_SERVER_RUST_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../rpc-rust/build.rs
+        ${CMAKE_CURRENT_SOURCE_DIR}/../rpc-rust/src/main.rs
+)
+
+add_custom_target(${TARGET} ALL DEPENDS ${RPC_SERVER_RUST_OUTPUT})
 
 if(LLAMA_TOOLS_INSTALL)
-    install(TARGETS ${TARGET} RUNTIME)
+    install(PROGRAMS ${RPC_SERVER_RUST_OUTPUT} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()

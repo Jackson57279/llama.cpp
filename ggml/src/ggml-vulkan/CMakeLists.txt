@@ -54,9 +54,10 @@ endfunction()
 if (Vulkan_FOUND)
     message(STATUS "Vulkan found")
 
+    set_source_files_properties(ggml-vulkan.cpp.inc PROPERTIES LANGUAGE CXX)
     ggml_add_backend_library(ggml-vulkan
-                             ggml-vulkan.cpp
-                             ../../include/ggml-vulkan.h
+                             ggml-vulkan.cpp.inc
+                             ../../include/ggml-vulkan.h.inc
                             )
 
     set(VULKAN_SHADER_GEN_CMAKE_ARGS "")

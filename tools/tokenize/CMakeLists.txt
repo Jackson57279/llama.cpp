@@ -1,7 +1,25 @@
 set(TARGET llama-tokenize)
-add_executable(${TARGET} tokenize.cpp)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+
+set(TOKENIZE_RUST_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/../tokenize-rust/Cargo.toml)
+set(TOKENIZE_RUST_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/tokenize)
+set(TOKENIZE_RUST_BIN ${TOKENIZE_RUST_TARGET_DIR}/debug/llama-tokenize${CMAKE_EXECUTABLE_SUFFIX})
+set(TOKENIZE_RUST_OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+
+add_custom_command(
+    OUTPUT ${TOKENIZE_RUST_OUTPUT}
+    COMMAND ${CMAKE_COMMAND} -E env LLAMA_CPP_LIB_DIR=$<TARGET_FILE_DIR:llama>
+            ${CARGO_EXECUTABLE} build --manifest-path ${TOKENIZE_RUST_MANIFEST} --target-dir ${TOKENIZE_RUST_TARGET_DIR} --bin llama-tokenize
+    COMMAND ${CMAKE_COMMAND} -E copy ${TOKENIZE_RUST_BIN} ${TOKENIZE_RUST_OUTPUT}
+    DEPENDS
+        llama
+        ${TOKENIZE_RUST_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../tokenize-rust/build.rs
+        ${CMAKE_CURRENT_SOURCE_DIR}/../tokenize-rust/src/lib.rs
+        ${CMAKE_CURRENT_SOURCE_DIR}/../tokenize-rust/src/main.rs
+)
+
+add_custom_target(${TARGET} ALL DEPENDS ${TOKENIZE_RUST_OUTPUT})
 if(LLAMA_TOOLS_INSTALL)
-    install(TARGETS ${TARGET} RUNTIME)
+    install(PROGRAMS ${TOKENIZE_RUST_OUTPUT} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
-target_link_libraries(${TARGET} PRIVATE llama-common llama ${CMAKE_THREAD_LIBS_INIT})
-target_compile_features(${TARGET} PRIVATE cxx_std_17)

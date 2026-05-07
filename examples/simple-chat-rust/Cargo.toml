@@ -1,0 +1,12 @@
+[package]
+name = "llama-simple-chat-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+llama-simple-rust = { path = "../simple-rust" }
+
+[[bin]]
+name = "llama-simple-chat"
+path = "src/main.rs"

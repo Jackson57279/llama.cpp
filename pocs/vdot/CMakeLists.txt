@@ -1,9 +1,44 @@
 set(TARGET llama-vdot)
-add_executable(${TARGET} vdot.cpp)
-target_link_libraries(${TARGET} PRIVATE llama-common llama ${CMAKE_THREAD_LIBS_INIT})
-target_compile_features(${TARGET} PRIVATE cxx_std_17)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+
+set(VDOT_RUST_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/vdot-rust/Cargo.toml)
+set(VDOT_RUST_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/vdot)
+set(VDOT_RUST_BIN ${VDOT_RUST_TARGET_DIR}/debug/llama-vdot${CMAKE_EXECUTABLE_SUFFIX})
+set(VDOT_RUST_OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+
+add_custom_command(
+    OUTPUT ${VDOT_RUST_OUTPUT}
+    COMMAND ${CMAKE_COMMAND} -E env LLAMA_CPP_LIB_DIR=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            ${CARGO_EXECUTABLE} build --manifest-path ${VDOT_RUST_MANIFEST} --target-dir ${VDOT_RUST_TARGET_DIR} --bin llama-vdot
+    COMMAND ${CMAKE_COMMAND} -E copy ${VDOT_RUST_BIN} ${VDOT_RUST_OUTPUT}
+    DEPENDS
+        ggml-cpu
+        ${VDOT_RUST_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/vdot-rust/build.rs
+        ${CMAKE_CURRENT_SOURCE_DIR}/vdot-rust/src/lib.rs
+        ${CMAKE_CURRENT_SOURCE_DIR}/vdot-rust/src/main.rs
+)
+
+add_custom_target(${TARGET} DEPENDS ${VDOT_RUST_OUTPUT})
 
 set(TARGET llama-q8dot)
-add_executable(${TARGET} q8dot.cpp)
-target_link_libraries(${TARGET} PRIVATE llama-common llama ${CMAKE_THREAD_LIBS_INIT})
-target_compile_features(${TARGET} PRIVATE cxx_std_17)
+
+set(Q8DOT_RUST_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/q8dot-rust/Cargo.toml)
+set(Q8DOT_RUST_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/q8dot)
+set(Q8DOT_RUST_BIN ${Q8DOT_RUST_TARGET_DIR}/debug/llama-q8dot${CMAKE_EXECUTABLE_SUFFIX})
+set(Q8DOT_RUST_OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+
+add_custom_command(
+    OUTPUT ${Q8DOT_RUST_OUTPUT}
+    COMMAND ${CMAKE_COMMAND} -E env LLAMA_CPP_LIB_DIR=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+            ${CARGO_EXECUTABLE} build --manifest-path ${Q8DOT_RUST_MANIFEST} --target-dir ${Q8DOT_RUST_TARGET_DIR} --bin llama-q8dot
+    COMMAND ${CMAKE_COMMAND} -E copy ${Q8DOT_RUST_BIN} ${Q8DOT_RUST_OUTPUT}
+    DEPENDS
+        ggml-cpu
+        ${Q8DOT_RUST_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/q8dot-rust/build.rs
+        ${CMAKE_CURRENT_SOURCE_DIR}/q8dot-rust/src/lib.rs
+        ${CMAKE_CURRENT_SOURCE_DIR}/q8dot-rust/src/main.rs
+)
+
+add_custom_target(${TARGET} DEPENDS ${Q8DOT_RUST_OUTPUT})

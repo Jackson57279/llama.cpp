@@ -25,8 +25,9 @@ else()
     message(FATAL_ERROR "zdnn: library not found, please set ZDNN_ROOT to the proper path if necessary")
 endif()
 
-file(GLOB GGML_SOURCES_ZDNN "*.c" "*.cpp")
-file(GLOB GGML_HEADERS_ZDNN "*.h" "*.hpp")
+set(GGML_SOURCES_ZDNN ggml-zdnn.cpp.inc)
+set(GGML_HEADERS_ZDNN)
+set_source_files_properties(${GGML_SOURCES_ZDNN} PROPERTIES LANGUAGE CXX)
 
 ggml_add_backend_library(ggml-zdnn ${GGML_HEADERS_ZDNN} ${GGML_SOURCES_ZDNN})
 target_link_libraries(ggml-zdnn PRIVATE ${ZDNN_LIB})

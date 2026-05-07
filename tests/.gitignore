@@ -2,6 +2,6 @@
 !*.*
 !snapshots/
 *.o
-ggml-common.h
+ggml-common-defs.inc
 **/*.swp
 !peg-parser

@@ -1,13 +1,21 @@
 set(TARGET llama-imatrix)
-add_executable(${TARGET} imatrix.cpp)
-target_link_libraries(${TARGET} PRIVATE llama-common llama ${CMAKE_THREAD_LIBS_INIT})
-target_compile_features(${TARGET} PRIVATE cxx_std_17)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+
+set(IMATRIX_RUST_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/../imatrix-rust/Cargo.toml)
+set(IMATRIX_RUST_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/imatrix)
+set(IMATRIX_RUST_BIN ${IMATRIX_RUST_TARGET_DIR}/debug/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+set(IMATRIX_RUST_OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+
+add_custom_command(
+    OUTPUT ${IMATRIX_RUST_OUTPUT}
+    COMMAND ${CARGO_EXECUTABLE} build --manifest-path ${IMATRIX_RUST_MANIFEST} --target-dir ${IMATRIX_RUST_TARGET_DIR} --bin ${TARGET}
+    COMMAND ${CMAKE_COMMAND} -E copy ${IMATRIX_RUST_BIN} ${IMATRIX_RUST_OUTPUT}
+    DEPENDS
+        ${IMATRIX_RUST_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../imatrix-rust/src/main.rs
+)
+add_custom_target(${TARGET} ALL DEPENDS ${IMATRIX_RUST_OUTPUT})
 
 if(LLAMA_TOOLS_INSTALL)
-    install(TARGETS ${TARGET} RUNTIME)
-endif()
-
-if (CMAKE_SYSTEM_NAME MATCHES "AIX")
-    # AIX's flock() function comes from libbsd.a
-    target_link_libraries(${TARGET} PRIVATE -lbsd)
+    install(PROGRAMS ${IMATRIX_RUST_OUTPUT} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()

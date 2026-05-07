@@ -27,7 +27,7 @@ logger = logging.getLogger("test-tokenizer-random")
 
 class LibLlama:
 
-    DEFAULT_PATH_LLAMA_H = "./include/llama.h"
+    DEFAULT_PATH_LLAMA_H = "./include/llama.h.inc"
     DEFAULT_PATH_INCLUDES = ["./ggml/include/", "./include/"]
     DEFAULT_PATH_LIBLLAMA = "./build/src/libllama.so"  # CMakeLists.txt: BUILD_SHARED_LIBS ON
 

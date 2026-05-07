@@ -1,11 +1,11 @@
 #define GGML_COMMON_DECL_METAL
 #define GGML_COMMON_IMPL_METAL
 #if defined(GGML_METAL_EMBED_LIBRARY)
-__embed_ggml-common.h__
+__embed_ggml-common-defs.inc__
 #else
-#include "ggml-common.h"
+#include "ggml-common-defs.inc"
 #endif
-#include "ggml-metal-impl.h"
+#include "ggml-metal-impl-defs.inc"
 
 #include <metal_stdlib>
 
@@ -2073,7 +2073,7 @@ template [[host_name("kernel_soft_max_f32")]]   kernel kernel_soft_max_t   kerne
 template [[host_name("kernel_soft_max_f16_4")]] kernel kernel_soft_max_4_t kernel_soft_max_4<half4>;
 template [[host_name("kernel_soft_max_f32_4")]] kernel kernel_soft_max_4_t kernel_soft_max_4<float4>;
 
-// ref: ggml.c:ggml_compute_forward_ssm_conv_f32
+// ref: ggml.c.inc:ggml_compute_forward_ssm_conv_f32
 kernel void kernel_ssm_conv_f32_f32(
         constant ggml_metal_kargs_ssm_conv & args,
         device const  void * src0,
@@ -2230,7 +2230,7 @@ kernel void kernel_ssm_conv_f32_f32_batched_4(
     x[0] = sumf;
 }
 
-// ref: ggml.c:ggml_compute_forward_ssm_scan_f32, Mamba-2 part
+// ref: ggml.c.inc:ggml_compute_forward_ssm_scan_f32, Mamba-2 part
 // Optimized version: reduces redundant memory loads by having one thread load shared values
 kernel void kernel_ssm_scan_f32(
         constant ggml_metal_kargs_ssm_scan & args,

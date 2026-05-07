@@ -29,24 +29,10 @@ if (NOT GGML_VIRTGPU_BACKEND STREQUAL "ONLY")
       target_compile_definitions(ggml PUBLIC "GGML_USE_VIRTGPU_FRONTEND")
     endif()
 
+    set_source_files_properties(virtgpu.cpp.inc PROPERTIES LANGUAGE CXX)
     ggml_add_backend_library(ggml-virtgpu
-                             ggml-backend-buffer.cpp
-                             ggml-backend.cpp
-                             ggml-backend-device.cpp
-                             ggml-backend-reg.cpp
-                             ggml-backend-buffer-type.cpp
-                             virtgpu-apir.h
-                             virtgpu-forward.gen.h
-                             virtgpu.cpp
-                             virtgpu-shm.cpp
-                             virtgpu-utils.cpp
-                             virtgpu-forward-device.cpp
-                             virtgpu-forward-buffer-type.cpp
-                             virtgpu-forward-buffer.cpp
-                             virtgpu-forward-backend.cpp
-                             virtgpu-forward-impl.h
-                             apir_cs_ggml-rpc-front.cpp
-                             ../../include/ggml-virtgpu.h)
+                             virtgpu.cpp.inc
+                             ../../include/ggml-virtgpu.h.inc)
 
     target_include_directories(ggml-virtgpu PUBLIC /usr/include/libdrm/)
 

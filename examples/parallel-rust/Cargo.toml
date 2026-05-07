@@ -1,0 +1,12 @@
+[package]
+name = "llama-parallel-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+llama-simple-rust = { path = "../simple-rust" }
+
+[[bin]]
+name = "llama-parallel"
+path = "src/main.rs"

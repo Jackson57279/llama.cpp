@@ -1,0 +1,14 @@
+// Consolidated explicit instantiations for SYCL flash-attention tile cases.
+
+#include "../fattn-tile-defs.inc"
+
+DECL_FATTN_TILE_CASE( 40,  40);
+DECL_FATTN_TILE_CASE( 64,  64);
+DECL_FATTN_TILE_CASE( 72,  72);
+DECL_FATTN_TILE_CASE( 80,  80);
+DECL_FATTN_TILE_CASE( 96,  96);
+DECL_FATTN_TILE_CASE(112, 112);
+DECL_FATTN_TILE_CASE(128, 128);
+DECL_FATTN_TILE_CASE(256, 256);
+DECL_FATTN_TILE_CASE(512, 512);
+DECL_FATTN_TILE_CASE(576, 512);

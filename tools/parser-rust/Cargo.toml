@@ -1,0 +1,16 @@
+[package]
+name = "llama-parser-tools-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+llama-simple-rust = { path = "../../examples/simple-rust" }
+
+[[bin]]
+name = "llama-debug-template-parser"
+path = "src/bin/debug_template_parser.rs"
+
+[[bin]]
+name = "llama-template-analysis"
+path = "src/bin/template_analysis.rs"

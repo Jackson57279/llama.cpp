@@ -10,7 +10,7 @@ The implementation can be found in the `common/jinja` directory.
 - Decoupled from `nlohmann::json`: this dependency is only used for JSON-to-internal type translation and is completely optional
 - Minimal primitive types: int, float, bool, string, array, object, none, undefined
 - Detailed logging: allow source tracing on error
-- Clean architecture: workarounds are applied to input data before entering the runtime (see `common/chat.cpp`)
+- Clean architecture: workarounds are applied to input data before entering the runtime (see `common/common.cpp.inc`)
 
 ## Architecture
 
@@ -26,7 +26,7 @@ The implementation can be found in the `common/jinja` directory.
 
 **For maintainers and contributors:**
 - See `tests/test-chat-template.cpp` for usage examples
-- To add new built-ins, modify `jinja/value.cpp` and add corresponding tests in `tests/test-jinja.cpp`
+- To add new built-ins, modify `common.cpp.inc` and add corresponding tests in `tests/test-jinja.cpp`
 
 ## Input Marking
 
@@ -54,7 +54,7 @@ Since template output is a plain string, distinguishing legitimate special token
 
 ### Solution
 
-The llama.cpp Jinja engine introduces `jinja::string` (see `jinja/string.h`), which wraps `std::string` and preserves origin metadata.
+The llama.cpp Jinja engine introduces `jinja::string` (declared in `common.h.inc`), which wraps `std::string` and preserves origin metadata.
 
 **Implementation:**
 - Strings originating from user input are marked with `is_input = true`

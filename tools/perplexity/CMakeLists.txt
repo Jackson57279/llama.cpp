@@ -1,8 +1,23 @@
 set(TARGET llama-perplexity)
-add_executable(${TARGET} perplexity.cpp)
-target_link_libraries(${TARGET} PRIVATE llama-common llama ${CMAKE_THREAD_LIBS_INIT})
-target_compile_features(${TARGET} PRIVATE cxx_std_17)
+find_program(CARGO_EXECUTABLE cargo REQUIRED)
+
+set(PERPLEXITY_RUST_MANIFEST ${CMAKE_CURRENT_SOURCE_DIR}/../perplexity-rust/Cargo.toml)
+set(PERPLEXITY_RUST_TARGET_DIR ${CMAKE_BINARY_DIR}/cargo/perplexity)
+set(PERPLEXITY_RUST_BIN ${PERPLEXITY_RUST_TARGET_DIR}/debug/llama-perplexity${CMAKE_EXECUTABLE_SUFFIX})
+set(PERPLEXITY_RUST_OUTPUT ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${TARGET}${CMAKE_EXECUTABLE_SUFFIX})
+
+add_custom_command(
+    OUTPUT ${PERPLEXITY_RUST_OUTPUT}
+    COMMAND ${CMAKE_COMMAND} -E env LLAMA_CPP_LIB_DIR=$<TARGET_FILE_DIR:llama>
+            ${CARGO_EXECUTABLE} build --manifest-path ${PERPLEXITY_RUST_MANIFEST} --target-dir ${PERPLEXITY_RUST_TARGET_DIR} --bin llama-perplexity
+    COMMAND ${CMAKE_COMMAND} -E copy ${PERPLEXITY_RUST_BIN} ${PERPLEXITY_RUST_OUTPUT}
+    DEPENDS
+        ${PERPLEXITY_RUST_MANIFEST}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../perplexity-rust/src/main.rs
+)
+
+add_custom_target(${TARGET} ALL DEPENDS ${PERPLEXITY_RUST_OUTPUT})
 
 if(LLAMA_TOOLS_INSTALL)
-    install(TARGETS ${TARGET} RUNTIME)
+    install(PROGRAMS ${PERPLEXITY_RUST_OUTPUT} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()

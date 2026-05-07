@@ -1,0 +1,12 @@
+[package]
+name = "llama-results-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+llama-simple-rust = { path = "../../examples/simple-rust" }
+
+[[bin]]
+name = "llama-results"
+path = "src/main.rs"

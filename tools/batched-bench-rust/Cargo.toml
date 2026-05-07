@@ -1,0 +1,12 @@
+[package]
+name = "llama-batched-bench-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+llama-simple-rust = { path = "../../examples/simple-rust" }
+
+[[bin]]
+name = "llama-batched-bench"
+path = "src/main.rs"

@@ -1,0 +1,8 @@
+[package]
+name = "llama-perplexity-rust"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "llama-perplexity"
+path = "src/main.rs"

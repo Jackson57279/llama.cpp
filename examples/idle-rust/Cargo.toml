@@ -1,0 +1,12 @@
+[package]
+name = "llama-idle-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+llama-simple-rust = { path = "../simple-rust" }
+
+[[bin]]
+name = "llama-idle"
+path = "src/main.rs"

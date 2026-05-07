@@ -25,7 +25,7 @@ top-k = 20
 top-p = 0.95
 ```
 
-For security reasons, only certain options are allowed. Please refer to [preset.cpp](../common/preset.cpp) for the complete list of permitted options.
+For security reasons, only certain options are allowed. Please refer to [common.cpp.inc](../common/common.cpp.inc) for the complete list of permitted options.
 
 Example usage:
 

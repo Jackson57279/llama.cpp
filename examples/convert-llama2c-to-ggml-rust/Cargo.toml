@@ -1,0 +1,9 @@
+[package]
+name = "llama-convert-llama2c-to-ggml-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "llama-convert-llama2c-to-ggml"
+path = "src/main.rs"

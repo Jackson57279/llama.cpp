@@ -1,0 +1,9 @@
+[package]
+name = "llama-mtmd-debug-rust"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "llama-mtmd-debug"
+path = "src/main.rs"

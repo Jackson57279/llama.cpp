@@ -66,7 +66,8 @@ if (CANN_INSTALL_DIR)
         acl_op_compiler
     )
 
-    file(GLOB GGML_SOURCES_CANN "*.cpp")
+    set(GGML_SOURCES_CANN ggml-cann.cpp.inc)
+    set_source_files_properties(${GGML_SOURCES_CANN} PROPERTIES LANGUAGE CXX)
 
     ggml_add_backend_library(ggml-cann ${GGML_SOURCES_CANN})
     target_link_libraries(ggml-cann PRIVATE ${CANN_LIBRARIES})

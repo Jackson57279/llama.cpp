@@ -113,27 +113,27 @@ setup_framework_structure() {
     fi
 
     # Copy all required headers (common for all platforms)
-    cp include/llama.h             ${header_path}
-    cp ggml/include/ggml.h         ${header_path}
-    cp ggml/include/ggml-opt.h     ${header_path}
-    cp ggml/include/ggml-alloc.h   ${header_path}
-    cp ggml/include/ggml-backend.h ${header_path}
-    cp ggml/include/ggml-metal.h   ${header_path}
-    cp ggml/include/ggml-cpu.h     ${header_path}
-    cp ggml/include/ggml-blas.h    ${header_path}
-    cp ggml/include/gguf.h         ${header_path}
+    cp include/llama.h.inc             ${header_path}
+    cp ggml/include/ggml.h.inc         ${header_path}
+    cp ggml/include/ggml-opt.h.inc     ${header_path}
+    cp ggml/include/ggml-alloc.h.inc   ${header_path}
+    cp ggml/include/ggml-backend.h.inc ${header_path}
+    cp ggml/include/ggml-metal.h.inc   ${header_path}
+    cp ggml/include/ggml-cpu.h.inc     ${header_path}
+    cp ggml/include/ggml-blas.h.inc    ${header_path}
+    cp ggml/include/gguf.h.inc         ${header_path}
 
     # Create module map (common for all platforms)
     cat > ${module_path}module.modulemap << EOF
 framework module llama {
-    header "llama.h"
-    header "ggml.h"
-    header "ggml-alloc.h"
-    header "ggml-backend.h"
-    header "ggml-metal.h"
-    header "ggml-cpu.h"
-    header "ggml-blas.h"
-    header "gguf.h"
+    header "llama.h.inc"
+    header "ggml.h.inc"
+    header "ggml-alloc.h.inc"
+    header "ggml-backend.h.inc"
+    header "ggml-metal.h.inc"
+    header "ggml-cpu.h.inc"
+    header "ggml-blas.h.inc"
+    header "gguf.h.inc"
 
     link "c++"
     link framework "Accelerate"

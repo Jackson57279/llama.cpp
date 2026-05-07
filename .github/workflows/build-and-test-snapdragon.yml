@@ -7,7 +7,7 @@ on:
       - master
     paths:
       - '.github/workflows/build-and-test-snapdragon.yml'
-      - 'ggml/include/ggml-hexagon.h'
+      - 'ggml/include/ggml-hexagon.h.inc'
       - 'ggml/src/ggml-hexagon/**'
       - 'docs/backend/snapdragon/**'
       - 'scripts/snapdragon/**'
@@ -17,7 +17,7 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - '.github/workflows/build-and-test-snapdragon.yml'
-      - 'ggml/include/ggml-hexagon.h'
+      - 'ggml/include/ggml-hexagon.h.inc'
       - 'ggml/src/ggml-hexagon/**'
       - 'docs/backend/snapdragon/**'
       - 'scripts/snapdragon/**'

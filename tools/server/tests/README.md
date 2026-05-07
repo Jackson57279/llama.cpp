@@ -82,7 +82,7 @@ $ gdb --args ../../../build/bin/llama-server \
 ```
 And a break point can be set in before running:
 ```console
-(gdb) br server.cpp:4604
+(gdb) br server.cpp.inc:4604
 (gdb) r
 main: server is listening on http://127.0.0.1:8080 - starting the main loop
 srv  update_slots: all slots are idle

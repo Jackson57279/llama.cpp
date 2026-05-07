@@ -175,7 +175,7 @@ Most model output can be placed in one of the following categories:
   (Qwen3-Coder, MiniMax M2) or pseudo-function calls (LFM2)
 
 To provide broad coverage,
-[`common/chat-peg-parser.h`](/common/chat-peg-parser.h) contains builders and
+[`common/chat-auto-parser.h`](/common/chat-auto-parser.h) contains builders and
 mappers that help create parsers and visitors/extractors for these types. They
 require parsers to tag nodes to conform to an AST "shape". This normalization
 makes it easy to extract information and generalize parsing.

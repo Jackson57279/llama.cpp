@@ -320,24 +320,23 @@ include(CMakePackageConfigHelpers)
 
 # all public headers
 set(GGML_PUBLIC_HEADERS
-    include/ggml.h
-    include/ggml-cpu.h
-    include/ggml-alloc.h
-    include/ggml-backend.h
-    include/ggml-blas.h
-    include/ggml-cann.h
-    include/ggml-cpp.h
-    include/ggml-cuda.h
-    include/ggml-opt.h
-    include/ggml-metal.h
-    include/ggml-rpc.h
-    include/ggml-virtgpu.h
-    include/ggml-sycl.h
-    include/ggml-vulkan.h
-    include/ggml-webgpu.h
-    include/ggml-zendnn.h
-    include/ggml-openvino.h
-    include/gguf.h)
+    include/ggml.h.inc
+    include/ggml-cpu.h.inc
+    include/ggml-alloc.h.inc
+    include/ggml-backend.h.inc
+    include/ggml-blas.h.inc
+    include/ggml-cann.h.inc
+    include/ggml-cuda.h.inc
+    include/ggml-opt.h.inc
+    include/ggml-metal.h.inc
+    include/ggml-rpc.h.inc
+    include/ggml-virtgpu.h.inc
+    include/ggml-sycl.h.inc
+    include/ggml-vulkan.h.inc
+    include/ggml-webgpu.h.inc
+    include/ggml-zendnn.h.inc
+    include/ggml-openvino.h.inc
+    include/gguf.h.inc)
 
 set_target_properties(ggml PROPERTIES PUBLIC_HEADER "${GGML_PUBLIC_HEADERS}")
 #if (GGML_METAL)
