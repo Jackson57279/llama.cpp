@@ -54,27 +54,49 @@ struct llama_model_saver {
     void save(FILE * file);
 };
 
+extern "C" bool llama_model_saver_supports_arch_rust(int arch);
+extern "C" bool llama_bytes_ends_with_rust(
+        const uint8_t * data, size_t len,
+        const uint8_t * suffix, size_t suffix_len);
+extern "C" int32_t llama_seq_pos_or_none_rust(bool is_empty, int32_t value);
+extern "C" uint64_t llama_adapter_invocation_token_count_rust(bool is_null, size_t token_count);
+extern "C" uint32_t llama_memory_recurrent_n_rs_rust(bool is_full, uint32_t size, uint32_t partial_n);
+extern "C" uint32_t llama_memory_recurrent_head_rust(bool is_full, uint32_t head);
+extern "C" int32_t llama_memory_recurrent_rs_z_rust(bool is_full, int32_t rs_z);
+extern "C" uint32_t llama_model_n_gpu_layers_rust(int32_t param_n_gpu_layers, uint32_t n_layer);
+extern "C" float llama_model_rope_freq_rust(bool is_swa, float swa_value, float default_value);
+extern "C" int32_t llama_model_mrope_rope_type_rust(bool use_mrope, int32_t mrope_type, int32_t fallback_type);
+extern "C" float llama_yarn_get_mscale_rust(float scale, float mscale);
+extern "C" int32_t llama_detokenize_result_rust(int32_t total, int32_t text_len_max);
+extern "C" int32_t llama_status_code_from_bool_rust(bool success);
+extern "C" bool llama_file_has_direct_io_rust(int32_t fd, size_t alignment);
+extern "C" bool llama_quantize_use_more_bits_rust(int32_t i_layer, int32_t n_layers);
+extern "C" bool llama_token_attr_has_rust(int32_t attr, int32_t mask);
+extern "C" bool llama_vocab_is_eog_rust(int32_t token_id, size_t eog_count);
+extern "C" uint32_t llama_graph_max_nodes_linear_arch_rust(uint32_t n_tokens, size_t n_tensors);
+extern "C" bool llama_ring_buffer_is_empty_rust(size_t size);
+extern "C" bool llama_token_logit_desc_rust(float left, float right);
+extern "C" bool llama_spm_bigram_after_rust(float left_score, float right_score, int32_t left_index, int32_t right_index);
+extern "C" bool llama_bpe_bigram_after_rust(int32_t left_rank, int32_t right_rank, int32_t left_index, int32_t right_index);
+extern "C" bool llama_shifted_score_asc_rust(float left, float right);
+extern "C" bool llama_mirostat_surprise_exceeds_mu_rust(float probability, float mu);
+extern "C" bool llama_tensor_split_all_zero_rust(const float * values, size_t len);
+extern "C" bool llama_memory_has_enough_cells_rust(uint32_t used_cells, uint32_t required_seqs);
+extern "C" bool llama_hybrid_attn_nemotron_filter_rust(bool is_recurrent, uint32_t n_ff);
+extern "C" bool llama_hybrid_recr_nemotron_filter_rust(bool is_recurrent, uint32_t n_ff);
+extern "C" bool llama_cstr_less_rust(const char * left, const char * right);
+extern "C" bool llama_tensor_weight_before_rust(uint16_t left_idx, size_t left_offs, uint16_t right_idx, size_t right_offs);
+extern "C" bool llama_token_text_len_desc_rust(size_t left_len, size_t right_len);
+extern "C" bool llama_grammar_match_polarity_rust(bool found, bool is_positive);
+extern "C" bool llama_grammar_token_match_rust(uint32_t element_value, int32_t token);
+extern "C" bool llama_grammar_token_not_match_rust(uint32_t element_value, int32_t token);
+extern "C" bool llama_llm_arch_is_recurrent_rust(int arch);
+extern "C" bool llama_llm_arch_is_hybrid_rust(int arch);
+extern "C" bool llama_llm_arch_is_diffusion_rust(int arch);
+extern "C" bool llama_llm_arch_supports_sm_tensor_rust(int arch);
+
 static bool llama_model_saver_supports_arch(llm_arch arch) {
-    switch (arch) {
-        case LLM_ARCH_QWEN3NEXT:
-        case LLM_ARCH_QWEN35:
-        case LLM_ARCH_QWEN35MOE:
-        case LLM_ARCH_PLAMO3:
-        case LLM_ARCH_GEMMA3:
-        case LLM_ARCH_GEMMA3N:
-        case LLM_ARCH_COHERE2:
-        case LLM_ARCH_OLMO2:
-        case LLM_ARCH_BITNET:
-        case LLM_ARCH_T5:
-        case LLM_ARCH_EXAONE_MOE:
-        case LLM_ARCH_AFMOE:
-        case LLM_ARCH_APERTUS:
-        case LLM_ARCH_MIMO2:
-        case LLM_ARCH_STEP35:
-            return false;
-        default:
-            return true;
-    }
+    return llama_model_saver_supports_arch_rust((int) arch);
 }
 
 llama_model_saver::llama_model_saver(const struct llama_model * model) :
@@ -1316,7 +1338,9 @@ static void llama_adapter_lora_init_impl(llama_model & model, const char * path_
     // bundle lora_a and lora_b into pairs
     std::map<std::string, llama_adapter_lora_weight> ab_map;
     auto str_endswith = [](const std::string & str, const std::string & suffix) {
-        return str.size() >= suffix.size() && str.compare(str.size()-suffix.size(), suffix.size(), suffix) == 0;
+        return llama_bytes_ends_with_rust(
+                reinterpret_cast<const uint8_t *>(str.data()), str.size(),
+                reinterpret_cast<const uint8_t *>(suffix.data()), suffix.size());
     };
 
     for (ggml_tensor * cur = ggml_get_first_tensor(ctx.get()); cur; cur = ggml_get_next_tensor(ctx.get(), cur)) {
@@ -1536,10 +1560,9 @@ void llama_adapter_lora_free(llama_adapter_lora * adapter) {
 }
 
 uint64_t llama_adapter_get_alora_n_invocation_tokens(const struct llama_adapter_lora * adapter) {
-    if (!adapter) {
-        return 0;
-    }
-    return adapter->alora_invocation_tokens.size();
+    return llama_adapter_invocation_token_count_rust(
+            adapter == nullptr,
+            adapter == nullptr ? 0 : adapter->alora_invocation_tokens.size());
 }
 
 const llama_token * llama_adapter_get_alora_invocation_tokens(const llama_adapter_lora * adapter) {
@@ -2379,80 +2402,19 @@ const llm_tensor_info & llm_tensor_info_for(llm_tensor tensor) {
 }
 
 bool llm_arch_is_recurrent(const llm_arch & arch) {
-    switch (arch) {
-        case LLM_ARCH_MAMBA:
-        case LLM_ARCH_MAMBA2:
-        case LLM_ARCH_RWKV6:
-        case LLM_ARCH_RWKV6QWEN2:
-        case LLM_ARCH_RWKV7:
-        case LLM_ARCH_ARWKV7:
-            return true;
-        default:
-            return false;
-    }
+    return llama_llm_arch_is_recurrent_rust((int) arch);
 }
 
 bool llm_arch_is_hybrid(const llm_arch & arch) {
-    switch (arch) {
-        case LLM_ARCH_JAMBA:
-        case LLM_ARCH_FALCON_H1:
-        case LLM_ARCH_PLAMO2:
-        case LLM_ARCH_GRANITE_HYBRID:
-        case LLM_ARCH_LFM2:
-        case LLM_ARCH_LFM2MOE:
-        case LLM_ARCH_NEMOTRON_H:
-        case LLM_ARCH_NEMOTRON_H_MOE:
-        case LLM_ARCH_QWEN3NEXT:
-        case LLM_ARCH_KIMI_LINEAR:
-        case LLM_ARCH_QWEN35:
-        case LLM_ARCH_QWEN35MOE:
-            return true;
-        default:
-            return false;
-    }
+    return llama_llm_arch_is_hybrid_rust((int) arch);
 }
 
 bool llm_arch_is_diffusion(const llm_arch & arch) {
-    switch (arch) {
-        case LLM_ARCH_DREAM:
-        case LLM_ARCH_LLADA:
-        case LLM_ARCH_LLADA_MOE:
-        case LLM_ARCH_RND1:
-            return true;
-        default:
-            return false;
-    }
+    return llama_llm_arch_is_diffusion_rust((int) arch);
 }
 
 bool llm_arch_supports_sm_tensor(const llm_arch & arch) {
-    switch (arch) {
-        case LLM_ARCH_GROK:
-        case LLM_ARCH_MPT:
-        case LLM_ARCH_PLAMO2:
-        case LLM_ARCH_MINICPM3:
-        case LLM_ARCH_GEMMA3N:
-        case LLM_ARCH_MAMBA:
-        case LLM_ARCH_MAMBA2:
-        case LLM_ARCH_JAMBA:
-        case LLM_ARCH_FALCON_H1:
-        case LLM_ARCH_OLMO2:
-        case LLM_ARCH_OLMOE:
-        case LLM_ARCH_DEEPSEEK2:
-        case LLM_ARCH_GLM_DSA:
-        case LLM_ARCH_BITNET:
-        case LLM_ARCH_T5:
-        case LLM_ARCH_NEMOTRON_H:
-        case LLM_ARCH_NEMOTRON_H_MOE:
-        case LLM_ARCH_GRANITE_HYBRID:
-        case LLM_ARCH_LFM2:
-        case LLM_ARCH_LFM2MOE:
-        case LLM_ARCH_MINIMAX_M2:
-        case LLM_ARCH_MISTRAL4:
-        case LLM_ARCH_KIMI_LINEAR:
-            return false;
-        default:
-            return true;
-    }
+    return llama_llm_arch_supports_sm_tensor_rust((int) arch);
 }
 
 #include "llama-impl.h.inc"
@@ -2908,11 +2870,13 @@ std::vector<int32_t> & llama_batch_allocr::get_out_ids() {
 }
 
 llama_pos llama_batch_allocr::seq_pos_min(llama_seq_id seq_id) const {
-    return seq_pos[seq_id].empty() ? -1 : *seq_pos[seq_id].begin();
+    const auto & positions = seq_pos[seq_id];
+    return llama_seq_pos_or_none_rust(positions.empty(), positions.empty() ? 0 : *positions.begin());
 }
 
 llama_pos llama_batch_allocr::seq_pos_max(llama_seq_id seq_id) const {
-    return seq_pos[seq_id].empty() ? -1 : *seq_pos[seq_id].rbegin();
+    const auto & positions = seq_pos[seq_id];
+    return llama_seq_pos_or_none_rust(positions.empty(), positions.empty() ? 0 : *positions.rbegin());
 }
 
 void llama_batch_allocr::split_reset() {
@@ -3396,16 +3360,14 @@ int32_t llm_chat_apply_template(
     #define LU8(x) u8##x
 #endif
 
+extern "C" void llama_trim_ascii_whitespace_bounds_rust(const uint8_t * data, size_t len, size_t * start_out, size_t * end_out);
+
 // trim whitespace from the beginning and end of a string
 static std::string trim(const std::string & str) {
     size_t start = 0;
     size_t end = str.size();
-    while (start < end && isspace(static_cast<unsigned char>(str[start]))) {
-        start += 1;
-    }
-    while (end > start && isspace(static_cast<unsigned char>(str[end - 1]))) {
-        end -= 1;
-    }
+    llama_trim_ascii_whitespace_bounds_rust(
+            reinterpret_cast<const uint8_t *>(str.data()), str.size(), &start, &end);
     return str.substr(start, end - start);
 }
 
@@ -4416,10 +4378,6 @@ llama_context::llama_context(
     }
 
     if (cparams.yarn_ext_factor != 0) {
-        static auto get_mscale = [](float scale, float mscale) {
-            return scale <= 1.0f ? 1.0f : (0.1f * mscale * logf(scale) + 1.0f);
-        };
-
         const float factor = 1.0f / cparams.rope_freq_scale;
 
         // ref: https://github.com/huggingface/transformers/blob/6d00f6b0a5679c36510f203e4226e36f517c3032/src/transformers/modeling_rope_utils.py#L336-L348
@@ -4436,12 +4394,12 @@ llama_context::llama_context(
                 mscale = mscale_all_dims;
             }
 
-            cparams.yarn_attn_factor = get_mscale(factor, mscale) / get_mscale(factor, mscale_all_dims);
+            cparams.yarn_attn_factor = llama_yarn_get_mscale_rust(factor, mscale) / llama_yarn_get_mscale_rust(factor, mscale_all_dims);
 
             LLAMA_LOG_WARN("%s: setting new yarn_attn_factor = %.4f (mscale == %.1f, mscale_all_dim = %.1f)\n",
                     __func__, cparams.yarn_attn_factor, mscale, mscale_all_dims);
         } else {
-            cparams.yarn_attn_factor = get_mscale(factor, 1.0f);
+            cparams.yarn_attn_factor = llama_yarn_get_mscale_rust(factor, 1.0f);
         }
 
         // when YARN is applied with yarn_ext_factor != 0.0f, we need to cancel this factor:
@@ -6389,7 +6347,7 @@ void llama_context::output_reorder() {
 
 uint32_t llama_context::graph_max_nodes(uint32_t n_tokens) const {
     if (model.arch == LLM_ARCH_QWEN3NEXT || model.arch == LLM_ARCH_KIMI_LINEAR || model.arch == LLM_ARCH_QWEN35 || model.arch == LLM_ARCH_QWEN35MOE) {
-        return std::max<uint32_t>(n_tokens * 40, 32u * model.n_tensors());
+        return llama_graph_max_nodes_linear_arch_rust(n_tokens, model.n_tensors());
     }
     uint32_t res = std::max<uint32_t>(1024u, 8u*model.n_tensors());
     for (const auto & lora : model.loras) {
@@ -7527,7 +7485,7 @@ int32_t llama_set_adapter_cvec(
               int32_t   il_end) {
     bool res = ctx->set_adapter_cvec(data, len, n_embd, il_start, il_end);
 
-    return res ? 0 : -1;
+    return llama_status_code_from_bool_rust(res);
 }
 
 //
@@ -7939,13 +7897,11 @@ static std::pair<std::vector<uint32_t>, llama_partial_utf8> decode_utf8(
     return std::make_pair(std::move(code_points), llama_partial_utf8{ value, n_remain });
 }
 
-static bool is_digit_char(char c) {
-    return '0' <= c && c <= '9';
-}
+extern "C" bool llama_is_digit_char_rust(uint8_t c);
+#define is_digit_char(c) llama_is_digit_char_rust((uint8_t) (c))
 
-static bool is_word_char(char c) {
-    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '-' || is_digit_char(c);
-}
+extern "C" bool llama_is_word_char_rust(uint8_t c);
+#define is_word_char(c) llama_is_word_char_rust((uint8_t) (c))
 
 static std::pair<uint32_t, const char *> parse_hex(const char * src, int size) {
     const char * pos   = src;
@@ -8085,15 +8041,10 @@ static void print_grammar_char(FILE * file, uint32_t c) {
     }
 }
 
+extern "C" bool llama_grammar_type_is_char_element_rust(int element_type);
+
 static bool is_char_element(llama_grammar_element elem) {
-    switch (elem.type) {
-        case LLAMA_GRETYPE_CHAR:           return true;
-        case LLAMA_GRETYPE_CHAR_NOT:       return true;
-        case LLAMA_GRETYPE_CHAR_ALT:       return true;
-        case LLAMA_GRETYPE_CHAR_RNG_UPPER: return true;
-        case LLAMA_GRETYPE_CHAR_ANY:       return true;
-        default:                           return false;
-    }
+    return llama_grammar_type_is_char_element_rust((int) elem.type);
 }
 
 static void print_rule_binary(FILE * file, const llama_grammar_rule & rule) {
@@ -8592,13 +8543,11 @@ llama_grammar_stack llama_grammar_parser::c_rules() const {
     return ret;
 }
 
+extern "C" bool llama_grammar_type_is_end_of_sequence_rust(int element_type);
+
 // returns true iff pos points to the end of one of the definitions of a rule
 static bool llama_grammar_is_end_of_sequence(const llama_grammar_element * pos) {
-    switch (pos->type) {
-        case LLAMA_GRETYPE_END: return true;  // NOLINT
-        case LLAMA_GRETYPE_ALT: return true;  // NOLINT
-        default:                return false;
-    }
+    return llama_grammar_type_is_end_of_sequence_rust((int) pos->type);
 }
 
 // returns true iff chr satisfies the char range at pos (regular or inverse range)
@@ -8627,7 +8576,7 @@ static std::pair<bool, const llama_grammar_element *> llama_grammar_match_char(
         }
     } while (pos->type == LLAMA_GRETYPE_CHAR_ALT);
 
-    return std::make_pair(found == is_positive_char, pos);
+    return std::make_pair(llama_grammar_match_polarity_rust(found, is_positive_char), pos);
 }
 
 // returns true iff some continuation of the given partial UTF-8 sequence could satisfy the char
@@ -8688,10 +8637,10 @@ static bool llama_grammar_match_token(
     const llama_token             token) {
     GGML_ASSERT(pos->type == LLAMA_GRETYPE_TOKEN || pos->type == LLAMA_GRETYPE_TOKEN_NOT);
     if (pos->type == LLAMA_GRETYPE_TOKEN) {
-        return pos->value == static_cast<uint32_t>(token);
+        return llama_grammar_token_match_rust(pos->value, token);
     }
     if (pos->type == LLAMA_GRETYPE_TOKEN_NOT) {
-        return pos->value != static_cast<uint32_t>(token);
+        return llama_grammar_token_not_match_rust(pos->value, token);
     }
     return false;
 }
@@ -9410,6 +9359,9 @@ static ggml_tensor * build_attn_inp_kq_mask(
     return res;
 }
 
+extern "C" bool llama_can_reuse_kq_mask_rust(
+        int64_t ne0, int64_t ne1, int64_t ne2, int64_t ne3, int64_t n_kv, uint32_t n_tokens, uint32_t n_stream);
+
 static bool can_reuse_kq_mask(
         ggml_tensor * kq_mask,
         const llama_kv_cache_context * mctx,
@@ -9419,14 +9371,8 @@ static bool can_reuse_kq_mask(
     const auto n_tokens = ubatch.n_tokens;
     const auto n_stream = cparams.kv_unified ? 1 : ubatch.n_seqs_unq;
 
-    bool res = true;
-
-    res &= (kq_mask->ne[0] == n_kv);
-    res &= (kq_mask->ne[1] == n_tokens/n_stream);
-    res &= (kq_mask->ne[2] == 1);
-    res &= (kq_mask->ne[3] == n_stream);
-
-    return res;
+    return llama_can_reuse_kq_mask_rust(
+            kq_mask->ne[0], kq_mask->ne[1], kq_mask->ne[2], kq_mask->ne[3], n_kv, n_tokens, n_stream);
 }
 
 // impl
@@ -12397,39 +12343,36 @@ std::string format(const char * fmt, ...) {
     return std::string(buf.data(), size);
 }
 
-std::string llama_format_tensor_shape(const std::vector<int64_t> & ne) {
-    char buf[256];
-    snprintf(buf, sizeof(buf), "%6" PRId64, ne.at(0));
-    for (size_t i = 1; i < ne.size(); i++) {
-        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ", %6" PRId64, ne.at(i));
+struct llama_byte_buffer_rust {
+    uint8_t * data;
+    size_t len;
+};
+
+extern "C" void llama_byte_buffer_free_rust(llama_byte_buffer_rust buffer);
+
+static std::string llama_byte_buffer_to_string(llama_byte_buffer_rust buffer) {
+    if (buffer.data == nullptr) {
+        return {};
     }
-    return buf;
+    std::string output((const char *) buffer.data, buffer.len);
+    llama_byte_buffer_free_rust(buffer);
+    return output;
+}
+
+extern "C" llama_byte_buffer_rust llama_format_tensor_shape_rust(const int64_t * data, size_t len);
+
+std::string llama_format_tensor_shape(const std::vector<int64_t> & ne) {
+    return llama_byte_buffer_to_string(llama_format_tensor_shape_rust(ne.data(), ne.size()));
 }
 
 std::string llama_format_tensor_shape(const struct ggml_tensor * t) {
-    char buf[256];
-    snprintf(buf, sizeof(buf), "%6" PRId64, t->ne[0]);
-    for (int i = 1; i < GGML_MAX_DIMS; i++) {
-        snprintf(buf + strlen(buf), sizeof(buf) - strlen(buf), ", %6" PRId64, t->ne[i]);
-    }
-    return buf;
+    return llama_byte_buffer_to_string(llama_format_tensor_shape_rust(t->ne, GGML_MAX_DIMS));
 }
 
+extern "C" llama_byte_buffer_rust llama_gguf_data_to_str_rust(int gguf_type, const uint8_t * data, size_t index);
+
 static std::string gguf_data_to_str(enum gguf_type type, const void * data, int i) {
-    switch (type) {
-        case GGUF_TYPE_UINT8:   return std::to_string(((const uint8_t  *)data)[i]);
-        case GGUF_TYPE_INT8:    return std::to_string(((const int8_t   *)data)[i]);
-        case GGUF_TYPE_UINT16:  return std::to_string(((const uint16_t *)data)[i]);
-        case GGUF_TYPE_INT16:   return std::to_string(((const int16_t  *)data)[i]);
-        case GGUF_TYPE_UINT32:  return std::to_string(((const uint32_t *)data)[i]);
-        case GGUF_TYPE_INT32:   return std::to_string(((const int32_t  *)data)[i]);
-        case GGUF_TYPE_UINT64:  return std::to_string(((const uint64_t *)data)[i]);
-        case GGUF_TYPE_INT64:   return std::to_string(((const int64_t  *)data)[i]);
-        case GGUF_TYPE_FLOAT32: return std::to_string(((const float    *)data)[i]);
-        case GGUF_TYPE_FLOAT64: return std::to_string(((const double   *)data)[i]);
-        case GGUF_TYPE_BOOL:    return ((const int8_t *)data)[i] != 0 ? "true" : "false";
-        default:                return format("unknown type %d", type);
-    }
+    return llama_byte_buffer_to_string(llama_gguf_data_to_str_rust((int) type, (const uint8_t *) data, (size_t) i));
 }
 
 std::string gguf_kv_to_str(const struct gguf_context * ctx_gguf, int i) {
@@ -12481,9 +12424,8 @@ std::string gguf_kv_to_str(const struct gguf_context * ctx_gguf, int i) {
 #include <map>
 #include <stdexcept>
 
-static bool ggml_is_power_of_2(int n) {
-    return (n & (n - 1)) == 0;
-}
+extern "C" bool llama_is_power_of_2_rust(int n);
+#define ggml_is_power_of_2(n) llama_is_power_of_2_rust(n)
 
 // orthonormal Walsh-Hadamard rotation matrix
 // note: res^2 == I
@@ -12568,7 +12510,7 @@ llama_kv_cache::llama_kv_cache(
     // define a comparator for the buft -> ctx map to ensure that the order is well-defined:
     struct ggml_backend_buft_comparator {
         bool operator()(const ggml_backend_buffer_type_t & lhs, const ggml_backend_buffer_type_t & rhs) const {
-            return strcmp(ggml_backend_buft_name(lhs), ggml_backend_buft_name(rhs)) < 0;
+            return llama_cstr_less_rust(ggml_backend_buft_name(lhs), ggml_backend_buft_name(rhs));
         }
     };
     std::map<ggml_backend_buffer_type_t, ggml_context_ptr, ggml_backend_buft_comparator> ctx_map;
@@ -15007,7 +14949,7 @@ llama_memory_recurrent::llama_memory_recurrent(
     // define a comparator for the buft -> ctx map to ensure that the order is well-defined:
     struct ggml_backend_buft_comparator {
         bool operator()(const ggml_backend_buffer_type_t & lhs, const ggml_backend_buffer_type_t & rhs) const {
-            return strcmp(ggml_backend_buft_name(lhs), ggml_backend_buft_name(rhs)) < 0;
+            return llama_cstr_less_rust(ggml_backend_buft_name(lhs), ggml_backend_buft_name(rhs));
         }
     };
     std::map<ggml_backend_buffer_type_t, ggml_context_ptr, ggml_backend_buft_comparator> ctx_map;
@@ -15628,7 +15570,7 @@ bool llama_memory_recurrent::find_slot(const llama_ubatch & ubatch) {
         [](const mem_cell & cell){ return !cell.is_empty(); });
 
     // sanity check
-    return n >= n_seqs;
+    return llama_memory_has_enough_cells_rust(n, n_seqs);
 }
 
 bool llama_memory_recurrent::get_can_shift() const {
@@ -16105,15 +16047,15 @@ const llama_ubatch & llama_memory_recurrent_context::get_ubatch() const {
 }
 
 uint32_t llama_memory_recurrent_context::get_n_rs() const {
-    return is_full ? mem->size : mem->n;
+    return llama_memory_recurrent_n_rs_rust(is_full, mem->size, mem->n);
 }
 
 uint32_t llama_memory_recurrent_context::get_head() const {
-    return is_full ? 0 : mem->head;
+    return llama_memory_recurrent_head_rust(is_full, mem->head);
 }
 
 int32_t llama_memory_recurrent_context::get_rs_z() const {
-    return is_full ? 0 : mem->rs_z;
+    return llama_memory_recurrent_rs_z_rust(is_full, mem->rs_z);
 }
 
 uint32_t llama_memory_recurrent_context::get_size() const {
@@ -16502,7 +16444,7 @@ struct llama_file::impl {
     }
 
     bool has_direct_io() const {
-        return fd != -1 && alignment > 1;
+        return llama_file_has_direct_io_rust(fd, alignment);
     }
 
     ~impl() {
@@ -16938,50 +16880,14 @@ const char * llama_file_version_name(llama_fver version) {
     return "unknown";
 }
 
+extern "C" const char * llama_model_ftype_name_base_rust(int ftype);
+
 static std::string llama_model_ftype_name(llama_ftype ftype) {
     if (ftype & LLAMA_FTYPE_GUESSED) {
         return llama_model_ftype_name((enum llama_ftype) (ftype & ~LLAMA_FTYPE_GUESSED)) + " (guessed)";
     }
 
-    switch (ftype) {
-        case LLAMA_FTYPE_ALL_F32:         return "all F32";
-        case LLAMA_FTYPE_MOSTLY_F16:      return "F16";
-        case LLAMA_FTYPE_MOSTLY_BF16:     return "BF16";
-        case LLAMA_FTYPE_MOSTLY_Q1_0:     return "Q1_0";
-        case LLAMA_FTYPE_MOSTLY_Q4_0:     return "Q4_0";
-        case LLAMA_FTYPE_MOSTLY_Q4_1:     return "Q4_1";
-        case LLAMA_FTYPE_MOSTLY_Q5_0:     return "Q5_0";
-        case LLAMA_FTYPE_MOSTLY_Q5_1:     return "Q5_1";
-        case LLAMA_FTYPE_MOSTLY_Q8_0:     return "Q8_0";
-        case LLAMA_FTYPE_MOSTLY_MXFP4_MOE: return "MXFP4 MoE";
-        case LLAMA_FTYPE_MOSTLY_NVFP4:    return "NVFP4";
-        case LLAMA_FTYPE_MOSTLY_Q2_K:     return "Q2_K - Medium";
-        case LLAMA_FTYPE_MOSTLY_Q2_K_S:   return "Q2_K - Small";
-        case LLAMA_FTYPE_MOSTLY_Q3_K_S:   return "Q3_K - Small";
-        case LLAMA_FTYPE_MOSTLY_Q3_K_M:   return "Q3_K - Medium";
-        case LLAMA_FTYPE_MOSTLY_Q3_K_L:   return "Q3_K - Large";
-        case LLAMA_FTYPE_MOSTLY_Q4_K_S:   return "Q4_K - Small";
-        case LLAMA_FTYPE_MOSTLY_Q4_K_M:   return "Q4_K - Medium";
-        case LLAMA_FTYPE_MOSTLY_Q5_K_S:   return "Q5_K - Small";
-        case LLAMA_FTYPE_MOSTLY_Q5_K_M:   return "Q5_K - Medium";
-        case LLAMA_FTYPE_MOSTLY_Q6_K:     return "Q6_K";
-        case LLAMA_FTYPE_MOSTLY_TQ1_0:    return "TQ1_0 - 1.69 bpw ternary";
-        case LLAMA_FTYPE_MOSTLY_TQ2_0:    return "TQ2_0 - 2.06 bpw ternary";
-        case LLAMA_FTYPE_MOSTLY_IQ2_XXS:  return "IQ2_XXS - 2.0625 bpw";
-        case LLAMA_FTYPE_MOSTLY_IQ2_XS:   return "IQ2_XS - 2.3125 bpw";
-        case LLAMA_FTYPE_MOSTLY_IQ2_S:    return "IQ2_S - 2.5 bpw";
-        case LLAMA_FTYPE_MOSTLY_IQ2_M:    return "IQ2_M - 2.7 bpw";
-        case LLAMA_FTYPE_MOSTLY_IQ3_XS:   return "IQ3_XS - 3.3 bpw";
-        case LLAMA_FTYPE_MOSTLY_IQ3_XXS:  return "IQ3_XXS - 3.0625 bpw";
-        case LLAMA_FTYPE_MOSTLY_IQ1_S:    return "IQ1_S - 1.5625 bpw";
-        case LLAMA_FTYPE_MOSTLY_IQ1_M:    return "IQ1_M - 1.75 bpw";
-        case LLAMA_FTYPE_MOSTLY_IQ4_NL:   return "IQ4_NL - 4.5 bpw";
-        case LLAMA_FTYPE_MOSTLY_IQ4_XS:   return "IQ4_XS - 4.25 bpw";
-        case LLAMA_FTYPE_MOSTLY_IQ3_S:    return "IQ3_S - 3.4375 bpw";
-        case LLAMA_FTYPE_MOSTLY_IQ3_M:    return "IQ3_S mix - 3.66 bpw";
-
-        default: return "unknown, may not work";
-    }
+    return llama_model_ftype_name_base_rust((int) ftype);
 }
 
 // return a list of splits for a given path
@@ -21606,7 +21512,7 @@ bool llama_model::load_tensors(llama_model_loader & ml) {
     }
 
     // calculate the split points
-    bool all_zero = tensor_split == nullptr || std::all_of(tensor_split, tensor_split + n_devices(), [](float x) { return x == 0.0f; });
+    bool all_zero = llama_tensor_split_all_zero_rust(tensor_split, n_devices());
     std::vector<float> splits(n_devices());
     if (all_zero) {
         // default split, by free memory
@@ -26687,7 +26593,7 @@ const float * llama_model::tensor_split() const {
 }
 
 uint32_t llama_model::n_gpu_layers() const {
-    return params.n_gpu_layers >= 0 ? params.n_gpu_layers : hparams.n_layer + 1;
+    return llama_model_n_gpu_layers_rust(params.n_gpu_layers, hparams.n_layer);
 }
 
 llama_split_mode llama_model::split_mode() const {
@@ -26992,11 +26898,11 @@ const ggml_tensor * llama_model::get_tensor(const char * name) const {
 }
 
 float llama_model::get_rope_freq_base (const llama_cparams & cparams, int il) const {
-    return hparams.is_swa(il) ? hparams.rope_freq_base_train_swa : cparams.rope_freq_base;
+    return llama_model_rope_freq_rust(hparams.is_swa(il), hparams.rope_freq_base_train_swa, cparams.rope_freq_base);
 }
 
 float llama_model::get_rope_freq_scale(const llama_cparams & cparams, int il) const {
-    return hparams.is_swa(il) ? hparams.rope_freq_scale_train_swa : cparams.rope_freq_scale;
+    return llama_model_rope_freq_rust(hparams.is_swa(il), hparams.rope_freq_scale_train_swa, cparams.rope_freq_scale);
 }
 
 ggml_tensor * llama_model::get_rope_factors(const llama_cparams & cparams, int il) const {
@@ -27060,10 +26966,10 @@ llama_memory_i * llama_model::create_memory(const llama_memory_params & params, 
                         filter_recr = [&](int32_t) { return true; };
                     } else if (arch == LLM_ARCH_NEMOTRON_H || arch == LLM_ARCH_NEMOTRON_H_MOE) {
                         filter_attn = [&](int32_t il) {
-                            return !hparams.is_recurrent(il) && hparams.n_ff(il) == 0;
+                            return llama_hybrid_attn_nemotron_filter_rust(hparams.is_recurrent(il), hparams.n_ff(il));
                         };
                         filter_recr = [&](int32_t il) {
-                            return hparams.is_recurrent(il) && hparams.n_ff(il) == 0;
+                            return llama_hybrid_recr_nemotron_filter_rust(hparams.is_recurrent(il), hparams.n_ff(il));
                         };
                     }
 
@@ -27924,12 +27830,12 @@ llama_rope_type llama_model_rope_type(const llama_model * model) {
             return LLAMA_ROPE_TYPE_IMROPE;
 
         case LLM_ARCH_GLM4:
-            return model->hparams.use_mrope() ? LLAMA_ROPE_TYPE_MROPE : LLAMA_ROPE_TYPE_NORM;
+            return (llama_rope_type) llama_model_mrope_rope_type_rust(model->hparams.use_mrope(), LLAMA_ROPE_TYPE_MROPE, LLAMA_ROPE_TYPE_NORM);
         case LLM_ARCH_GLM4_MOE:
-            return model->hparams.use_mrope() ? LLAMA_ROPE_TYPE_MROPE : LLAMA_ROPE_TYPE_NEOX;
+            return (llama_rope_type) llama_model_mrope_rope_type_rust(model->hparams.use_mrope(), LLAMA_ROPE_TYPE_MROPE, LLAMA_ROPE_TYPE_NEOX);
 
         case LLM_ARCH_HUNYUAN_VL:
-            return model->hparams.use_mrope() ? LLAMA_ROPE_TYPE_MROPE : LLAMA_ROPE_TYPE_NEOX;
+            return (llama_rope_type) llama_model_mrope_rope_type_rust(model->hparams.use_mrope(), LLAMA_ROPE_TYPE_MROPE, LLAMA_ROPE_TYPE_NEOX);
 
         // all model arches should be listed explicitly here
         case LLM_ARCH_UNKNOWN:
@@ -28178,14 +28084,11 @@ static std::string remap_imatrix(const std::string & orig_name, const std::map<i
 // helper functions for tensor name matching
 //
 
-static bool tensor_name_match_token_embd(const char * tensor_name) {
-    return std::strcmp(tensor_name, "token_embd.weight") == 0 ||
-           std::strcmp(tensor_name, "per_layer_token_embd.weight") == 0;
-}
+extern "C" bool llama_tensor_name_match_token_embd_rust(const char * tensor_name);
+#define tensor_name_match_token_embd(tensor_name) llama_tensor_name_match_token_embd_rust(tensor_name)
 
-static bool tensor_name_match_output_weight(const char * tensor_name) {
-    return std::strcmp(tensor_name, "output.weight") == 0;
-}
+extern "C" bool llama_tensor_name_match_output_weight_rust(const char * tensor_name);
+#define tensor_name_match_output_weight(tensor_name) llama_tensor_name_match_output_weight_rust(tensor_name)
 
 //
 // tensor categorization for quantization
@@ -28193,48 +28096,17 @@ static bool tensor_name_match_output_weight(const char * tensor_name) {
 // (this is different from LLM_TN - we want broad categories, not specific tensor names per arch)
 //
 
+extern "C" int llama_tensor_get_category_rust(const char * tensor_name);
+
 static tensor_category tensor_get_category(const std::string & tensor_name) {
-    if (tensor_name_match_output_weight(tensor_name.c_str())) {
-        return tensor_category::OUTPUT;
-    }
-    if (tensor_name_match_token_embd(tensor_name.c_str())) {
-        return tensor_category::TOKEN_EMBD;
-    }
-    if (tensor_name.find("attn_qkv.weight") != std::string::npos) {
-        return tensor_category::ATTENTION_QKV;
-    }
-    if (tensor_name.find("attn_kv_b.weight") != std::string::npos) {
-        return tensor_category::ATTENTION_KV_B;
-    }
-    if (tensor_name.find("attn_v.weight") != std::string::npos) {
-        return tensor_category::ATTENTION_V;
-    }
-    if (tensor_name.find("attn_k.weight") != std::string::npos) {
-        return tensor_category::ATTENTION_K;
-    }
-    if (tensor_name.find("attn_q.weight") != std::string::npos) {
-        return tensor_category::ATTENTION_Q;
-    }
-    if (tensor_name.find("attn_output.weight") != std::string::npos) {
-        return tensor_category::ATTENTION_OUTPUT;
-    }
-    if (tensor_name.find("ffn_up") != std::string::npos) {
-        return tensor_category::FFN_UP;
-    }
-    if (tensor_name.find("ffn_gate") != std::string::npos) {
-        return tensor_category::FFN_GATE;
-    }
-    if (tensor_name.find("ffn_down") != std::string::npos) {
-        return tensor_category::FFN_DOWN;
-    }
-    return tensor_category::OTHER;
+    return (tensor_category) llama_tensor_get_category_rust(tensor_name.c_str());
 }
 
 // check if category is for attention-v-like tensors (more sensitive to quantization)
+extern "C" bool llama_tensor_category_is_attn_v_rust(int category);
+
 static bool category_is_attn_v(tensor_category cat) {
-    return cat == tensor_category::ATTENTION_V     ||
-           cat == tensor_category::ATTENTION_QKV   ||
-           cat == tensor_category::ATTENTION_KV_B;
+    return llama_tensor_category_is_attn_v_rust((int) cat);
 }
 
 //
@@ -28496,7 +28368,7 @@ static ggml_type llama_tensor_get_type_impl(quantize_state_impl & qs, ggml_type 
     const llm_arch arch = qs.model.arch;
 
     auto use_more_bits = [](int i_layer, int n_layers) -> bool {
-        return i_layer < n_layers/8 || i_layer >= 7*n_layers/8 || (i_layer - n_layers/8)%3 == 2;
+        return llama_quantize_use_more_bits_rust(i_layer, n_layers);
     };
     const int n_expert = std::max(1, (int)qs.model.hparams.n_expert);
     auto layer_info = [n_expert] (int i_layer, int n_layer, const char * name) {
@@ -28845,73 +28717,20 @@ static size_t llama_tensor_quantize_impl(enum ggml_type new_type, const float * 
 // imatrix requirement check
 //
 
+extern "C" bool llama_tensor_requires_imatrix_rust(const char * tensor_name, int dst_type, int ftype);
+
 static bool tensor_requires_imatrix(const char * tensor_name, const ggml_type dst_type, const llama_ftype ftype) {
-    if (tensor_name_match_token_embd(tensor_name) || tensor_name_match_output_weight(tensor_name)) {
-        return false;
-    }
-    switch (dst_type) {
-        case GGML_TYPE_IQ3_XXS:
-        case GGML_TYPE_IQ2_XXS:
-        case GGML_TYPE_IQ2_XS:
-        case GGML_TYPE_IQ2_S:
-        case GGML_TYPE_IQ1_M:
-        case GGML_TYPE_IQ1_S:
-            return true;
-        case GGML_TYPE_Q2_K:
-            // as a general rule, the k-type quantizations don't require imatrix data.
-            // the only exception is Q2_K tensors that are part of a Q2_K_S file.
-            return ftype == LLAMA_FTYPE_MOSTLY_Q2_K_S;
-        default:
-            return false;
-    }
+    return llama_tensor_requires_imatrix_rust(tensor_name, (int) dst_type, (int) ftype);
 }
 
 //
 // given a file type, get the default tensor type
 //
 
+extern "C" int llama_ftype_get_default_type_rust(int ftype);
+
 ggml_type llama_ftype_get_default_type(llama_ftype ftype) {
-    switch (ftype) {
-        case LLAMA_FTYPE_MOSTLY_Q4_0: return GGML_TYPE_Q4_0;
-        case LLAMA_FTYPE_MOSTLY_Q4_1: return GGML_TYPE_Q4_1;
-        case LLAMA_FTYPE_MOSTLY_Q5_0: return GGML_TYPE_Q5_0;
-        case LLAMA_FTYPE_MOSTLY_Q5_1: return GGML_TYPE_Q5_1;
-        case LLAMA_FTYPE_MOSTLY_Q8_0: return GGML_TYPE_Q8_0;
-        case LLAMA_FTYPE_MOSTLY_F16:  return GGML_TYPE_F16;
-        case LLAMA_FTYPE_MOSTLY_BF16: return GGML_TYPE_BF16;
-        case LLAMA_FTYPE_ALL_F32:     return GGML_TYPE_F32;
-        case LLAMA_FTYPE_MOSTLY_Q1_0: return GGML_TYPE_Q1_0;
-
-        case LLAMA_FTYPE_MOSTLY_MXFP4_MOE: return GGML_TYPE_MXFP4;
-
-        // K-quants
-        case LLAMA_FTYPE_MOSTLY_Q2_K_S:
-        case LLAMA_FTYPE_MOSTLY_Q2_K:    return GGML_TYPE_Q2_K;
-        case LLAMA_FTYPE_MOSTLY_IQ3_XS:  return GGML_TYPE_IQ3_S;
-        case LLAMA_FTYPE_MOSTLY_Q3_K_S:
-        case LLAMA_FTYPE_MOSTLY_Q3_K_M:
-        case LLAMA_FTYPE_MOSTLY_Q3_K_L:  return GGML_TYPE_Q3_K;
-        case LLAMA_FTYPE_MOSTLY_Q4_K_S:
-        case LLAMA_FTYPE_MOSTLY_Q4_K_M:  return GGML_TYPE_Q4_K;
-        case LLAMA_FTYPE_MOSTLY_Q5_K_S:
-        case LLAMA_FTYPE_MOSTLY_Q5_K_M:  return GGML_TYPE_Q5_K;
-        case LLAMA_FTYPE_MOSTLY_Q6_K:    return GGML_TYPE_Q6_K;
-        case LLAMA_FTYPE_MOSTLY_TQ1_0:   return GGML_TYPE_TQ1_0;
-        case LLAMA_FTYPE_MOSTLY_TQ2_0:   return GGML_TYPE_TQ2_0;
-        case LLAMA_FTYPE_MOSTLY_IQ2_XXS: return GGML_TYPE_IQ2_XXS;
-        case LLAMA_FTYPE_MOSTLY_IQ2_XS:  return GGML_TYPE_IQ2_XS;
-        case LLAMA_FTYPE_MOSTLY_IQ2_S:   return GGML_TYPE_IQ2_XS;
-        case LLAMA_FTYPE_MOSTLY_IQ2_M:   return GGML_TYPE_IQ2_S;
-        case LLAMA_FTYPE_MOSTLY_IQ3_XXS: return GGML_TYPE_IQ3_XXS;
-        case LLAMA_FTYPE_MOSTLY_IQ1_S:   return GGML_TYPE_IQ1_S;
-        case LLAMA_FTYPE_MOSTLY_IQ1_M:   return GGML_TYPE_IQ1_M;
-        case LLAMA_FTYPE_MOSTLY_IQ4_NL:  return GGML_TYPE_IQ4_NL;
-        case LLAMA_FTYPE_MOSTLY_IQ4_XS:  return GGML_TYPE_IQ4_XS;
-        case LLAMA_FTYPE_MOSTLY_IQ3_S:
-        case LLAMA_FTYPE_MOSTLY_IQ3_M:   return GGML_TYPE_IQ3_S;
-
-        default: return GGML_TYPE_COUNT;
-    }
+    return (ggml_type) llama_ftype_get_default_type_rust((int) ftype);
 }
 
 
@@ -29059,10 +28878,7 @@ static void llama_model_quantize_impl(const std::string & fname_inp, const std::
     // keep_split requires that the weights are sorted by split index
     if (params->keep_split) {
         std::sort(tensors.begin(), tensors.end(), [](const llama_model_loader::llama_tensor_weight * a, const llama_model_loader::llama_tensor_weight * b) {
-            if (a->idx == b->idx) {
-                return a->offs < b->offs;
-            }
-            return a->idx < b->idx;
+            return llama_tensor_weight_before_rust(a->idx, a->offs, b->idx, b->offs);
         });
     }
 
@@ -29643,7 +29459,7 @@ struct ring_buffer {
     }
 
     bool empty() const {
-        return sz == 0;
+        return llama_ring_buffer_is_empty_rust(sz);
     }
 
     size_t size() const {
@@ -29661,7 +29477,7 @@ struct ring_buffer {
 // writes result in res, does not mutate cur
 static void llama_token_data_array_partial_sort(const llama_token_data_array & cur, int npartial, std::vector<llama_token_data> & res) {
     static const auto comp = [](const llama_token_data & a, const llama_token_data & b) {
-        return a.logit > b.logit;
+        return llama_token_logit_desc_rust(a.logit, b.logit);
     };
 
     constexpr int   nbuckets     = 128;
@@ -29719,7 +29535,7 @@ static void llama_token_data_array_partial_sort(const llama_token_data_array & c
 // reduces the size of cur_p to npartial, keeping only the top npartial elements
 static void llama_token_data_array_partial_sort_inplace(llama_token_data_array * cur_p, int npartial) {
     static const auto comp = [](const llama_token_data & a, const llama_token_data & b) {
-        return a.logit > b.logit;
+        return llama_token_logit_desc_rust(a.logit, b.logit);
     };
 
     if (npartial <= 128) {
@@ -31251,7 +31067,7 @@ static void llama_sampler_typical_apply(struct llama_sampler * smpl, llama_token
     std::iota(indices.begin(), indices.end(), 0);
 
     std::sort(indices.begin(), indices.end(), [&](size_t a, size_t b) {
-        return shifted_scores[a] < shifted_scores[b];
+        return llama_shifted_score_asc_rust(shifted_scores[a], shifted_scores[b]);
     });
 
     // Compute the cumulative probabilities
@@ -31874,7 +31690,7 @@ static void llama_sampler_mirostat_v2_apply(struct llama_sampler * smpl, llama_t
 
     // Truncate the words with surprise values greater than mu
     cur_p->size = std::distance(cur_p->data, std::find_if(cur_p->data, cur_p->data + cur_p->size, [&](const llama_token_data & candidate) {
-        return -log2f(candidate.p) > ctx->mu;
+        return llama_mirostat_surprise_exceeds_mu_rust(candidate.p, ctx->mu);
     }));
 
     if (cur_p->size == 0) {
@@ -33534,7 +33350,7 @@ static_assert(std::is_trivially_copyable<llm_symbol>::value, "llm_symbol is not 
 struct llm_bigram_spm {
     struct comparator {
         bool operator()(llm_bigram_spm & l, llm_bigram_spm & r) {
-            return (l.score < r.score) || (l.score == r.score && l.left > r.left);
+            return llama_spm_bigram_after_rust(l.score, r.score, l.left, r.left);
         }
     };
     using queue_storage = std::vector<llm_bigram_spm>;
@@ -33701,7 +33517,7 @@ public:
 struct llm_bigram_bpe {
     struct comparator {
         bool operator()(const llm_bigram_bpe & l, const llm_bigram_bpe & r) const {
-            return l.rank > r.rank || (l.rank == r.rank && l.left > r.left);
+            return llama_bpe_bigram_after_rust(l.rank, r.rank, l.left, r.left);
         }
     };
 
@@ -34624,57 +34440,16 @@ private:
 // RWKV tokenizer
 //
 
+extern "C" llama_byte_buffer_rust llama_unescape_rwkv_token_rust(const uint8_t * data, size_t len);
+
 static std::vector<uint8_t> llama_unescape_rwkv_token(const std::string & escaped) {
-    std::vector<uint8_t> output;
-    output.reserve(escaped.size());
-
-    // Parser state
-    bool escaping = false;
-    uint8_t hex_remaining = 0;
-    uint8_t hex_acc = 0;
-
-    // Step through characters, performing parsing
-    for (const char & c : escaped) {
-        // If we're parsing a hex code, interpret the next character
-        if (hex_remaining != 0) {
-            uint8_t value = (c >= 'a') ? (c - 'a' + 10) : (c - '0');
-            hex_acc = (hex_acc << 4) + value;
-
-            hex_remaining -= 1;
-            if (hex_remaining == 0) {
-                output.push_back(hex_acc);
-                hex_acc = 0;
-            }
-
-            continue;
-        }
-
-        // If we got an escape character, interpret it
-        if (escaping) {
-            if (c == 't') {
-                output.push_back('\t');
-            } else if (c == 'n') {
-                output.push_back('\n');
-            } else if (c == 'r') {
-                output.push_back('\r');
-            } else if (c == 'x') {
-                hex_remaining = 2;
-            } else {
-                output.push_back(c);
-            }
-
-            escaping = false;
-            continue;
-        }
-
-        if (c == '\\') {
-            escaping = true;
-            continue;
-        }
-
-        output.push_back(c);
+    llama_byte_buffer_rust buffer = llama_unescape_rwkv_token_rust(
+            reinterpret_cast<const uint8_t *>(escaped.data()), escaped.size());
+    if (buffer.data == nullptr) {
+        return {};
     }
-
+    std::vector<uint8_t> output(buffer.data, buffer.data + buffer.len);
+    llama_byte_buffer_free_rust(buffer);
     return output;
 }
 
@@ -36132,7 +35907,7 @@ void llama_vocab::impl::load(llama_model_loader & ml, const LLM_KV & kv) {
 
         std::sort(cache_special_tokens.begin(), cache_special_tokens.end(),
             [&] (const llama_token a, const llama_token b) {
-                return id_to_token[a].text.size() > id_to_token[b].text.size();
+                return llama_token_text_len_desc_rust(id_to_token[a].text.size(), id_to_token[b].text.size());
             }
         );
 
@@ -36245,36 +36020,36 @@ std::string llama_vocab::impl::type_name() const{
 
 bool llama_vocab::impl::is_normal(llama_token id) const {
     GGML_ASSERT(type != LLAMA_VOCAB_TYPE_NONE);
-    return id_to_token[id].attr & LLAMA_TOKEN_ATTR_NORMAL;
+    return llama_token_attr_has_rust(id_to_token[id].attr, LLAMA_TOKEN_ATTR_NORMAL);
 }
 
 bool llama_vocab::impl::is_unknown(llama_token id) const {
     GGML_ASSERT(type != LLAMA_VOCAB_TYPE_NONE);
-    return id_to_token[id].attr & LLAMA_TOKEN_ATTR_UNKNOWN;
+    return llama_token_attr_has_rust(id_to_token[id].attr, LLAMA_TOKEN_ATTR_UNKNOWN);
 }
 
 bool llama_vocab::impl::is_control(llama_token id) const {
     GGML_ASSERT(type != LLAMA_VOCAB_TYPE_NONE);
-    return id_to_token[id].attr & LLAMA_TOKEN_ATTR_CONTROL;
+    return llama_token_attr_has_rust(id_to_token[id].attr, LLAMA_TOKEN_ATTR_CONTROL);
 }
 
 bool llama_vocab::impl::is_byte(llama_token id) const {
     GGML_ASSERT(type != LLAMA_VOCAB_TYPE_NONE);
-    return id_to_token[id].attr & LLAMA_TOKEN_ATTR_BYTE;
+    return llama_token_attr_has_rust(id_to_token[id].attr, LLAMA_TOKEN_ATTR_BYTE);
 }
 
 bool llama_vocab::impl::is_user_defined(llama_token id) const {
     GGML_ASSERT(type != LLAMA_VOCAB_TYPE_NONE);
-    return id_to_token[id].attr & LLAMA_TOKEN_ATTR_USER_DEFINED;
+    return llama_token_attr_has_rust(id_to_token[id].attr, LLAMA_TOKEN_ATTR_USER_DEFINED);
 }
 
 bool llama_vocab::impl::is_unused(llama_token id) const {
     GGML_ASSERT(type != LLAMA_VOCAB_TYPE_NONE);
-    return id_to_token[id].attr & LLAMA_TOKEN_ATTR_UNUSED;
+    return llama_token_attr_has_rust(id_to_token[id].attr, LLAMA_TOKEN_ATTR_UNUSED);
 }
 
 bool llama_vocab::impl::is_eog(llama_token id) const {
-    return id != LLAMA_TOKEN_NULL && special_eog_ids.count(id) > 0;
+    return llama_vocab_is_eog_rust(id, special_eog_ids.count(id));
 }
 
 uint8_t llama_vocab::impl::token_to_byte(llama_token id) const {
@@ -36866,7 +36641,7 @@ int32_t llama_vocab::impl::detokenize(
     }
 
     if (total > text_len_max) {
-        return -total;
+        return llama_detokenize_result_rust(total, text_len_max);
     }
 
     if (clean_spaces) {
@@ -36927,7 +36702,7 @@ int32_t llama_vocab::impl::detokenize(
         }
     }
 
-    return total <= text_len_max ? total : -total;
+    return llama_detokenize_result_rust(total, text_len_max);
 }
 
 void llama_vocab::impl::print_info() const {
