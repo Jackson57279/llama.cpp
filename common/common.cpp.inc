@@ -143,6 +143,7 @@ bool llama_common_jinja_is_false_rust(bool is_bool, bool value);
 bool llama_common_jinja_is_true_rust(bool is_bool, bool value);
 bool llama_common_jinja_is_defined_rust(bool is_undefined);
 bool llama_common_jinja_compare_f64_rust(double left, double right, int op);
+double llama_common_jinja_arithmetic_f64_rust(double left, double right, int op);
 bool llama_common_jinja_compare_bool_rust(bool left, bool right, int op);
 bool llama_common_jinja_bool_not_rust(bool value);
 bool llama_common_jinja_membership_result_rust(bool member, bool is_not_in);
@@ -9691,7 +9692,8 @@ value binary_expression::execute_impl(context & ctx) {
         double a = left_val->as_float();
         double b = right_val->as_float();
         if (op.value == "+" || op.value == "-" || op.value == "*") {
-            double res = (op.value == "+") ? a + b : (op.value == "-") ? a - b : a * b;
+            int op_id = (op.value == "+") ? 0 : (op.value == "-") ? 1 : 2;
+            double res = llama_common_jinja_arithmetic_f64_rust(a, b, op_id);
             JJ_DEBUG("Arithmetic operation: %f %s %f = %f", a, op.value.c_str(), b, res);
             bool is_float = is_val<value_float>(left_val) || is_val<value_float>(right_val);
             if (is_float) {
@@ -9701,9 +9703,9 @@ value binary_expression::execute_impl(context & ctx) {
             }
         } else if (op.value == "/") {
             JJ_DEBUG("Division operation: %f / %f", a, b);
-            return mk_val<value_float>(a / b);
+            return mk_val<value_float>(llama_common_jinja_arithmetic_f64_rust(a, b, 3));
         } else if (op.value == "%") {
-            double rem = std::fmod(a, b);
+            double rem = llama_common_jinja_arithmetic_f64_rust(a, b, 4);
             JJ_DEBUG("Modulo operation: %f %% %f = %f", a, b, rem);
             bool is_float = is_val<value_float>(left_val) || is_val<value_float>(right_val);
             if (is_float) {

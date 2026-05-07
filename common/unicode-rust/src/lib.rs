@@ -1147,11 +1147,7 @@ pub extern "C" fn llama_common_jinja_compare_f64_rust(left: f64, right: f64, op:
 }
 
 #[no_mangle]
-pub extern "C" fn llama_common_jinja_arithmetic_f64_rust(
-    left: f64,
-    right: f64,
-    op: i32,
-) -> f64 {
+pub extern "C" fn llama_common_jinja_arithmetic_f64_rust(left: f64, right: f64, op: i32) -> f64 {
     match op {
         0 => left + right,
         1 => left - right,
