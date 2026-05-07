@@ -22,10 +22,24 @@ using json = nlohmann::ordered_json;
 
 extern "C" {
 const char * llama_server_model_status_to_string_rust(int status);
+bool         llama_server_model_status_is_ready_rust(int status);
+bool         llama_server_model_status_is_running_rust(int status);
+bool         llama_server_model_status_is_failed_rust(int status, int exit_code);
+bool         llama_server_model_status_is_unloaded_rust(int status);
+bool         llama_server_model_status_is_loading_rust(int status);
+bool         llama_server_model_status_is_sleeping_rust(int status);
+bool         llama_server_http_res_is_stream_rust(bool has_next);
+bool         llama_server_task_need_embd_rust(int task_type);
+bool         llama_server_task_need_logits_rust(int task_type);
+bool         llama_server_task_need_sampling_rust(int task_type);
+bool         llama_server_task_is_parent_rust(size_t child_task_count);
+bool         llama_server_task_is_child_rust(int id_parent);
 bool         llama_server_header_name_is_rust(const uint8_t * data, size_t len, const char * expected);
 bool         llama_server_should_strip_proxy_header_rust(const uint8_t * data, size_t len);
 uint8_t *    llama_server_generate_multipart_boundary_rust(size_t * out_len);
 void         llama_server_base64_free(uint8_t * data, size_t len);
+bool         llama_server_is_autoload_rust(bool default_value, const uint8_t * data, size_t len);
+uint8_t *    llama_server_sanitize_multipart_field_rust(const uint8_t * data, size_t len, size_t * out_len);
 }
 
 #define SLT_INF(slot, fmt, ...) LOG_INF("slot %12.*s: id %2d | task %d | " fmt, 12, __func__, (slot).id, ((slot).task ? (slot).task->id : -1), __VA_ARGS__)
@@ -57,7 +71,7 @@ struct server_http_res {
     // TODO: move this to a virtual function once we have proper polymorphism support
     std::function<bool(std::string &)> next = nullptr;
     bool is_stream() const {
-        return next != nullptr;
+        return llama_server_http_res_is_stream_rust(next != nullptr);
     }
 
     virtual ~server_http_res() = default;
@@ -149,15 +163,15 @@ struct server_model_meta {
     int stop_timeout = 0; // seconds to wait before force-killing the model instance during shutdown
 
     bool is_ready() const {
-        return status == SERVER_MODEL_STATUS_LOADED;
+        return llama_server_model_status_is_ready_rust(status);
     }
 
     bool is_running() const {
-        return status == SERVER_MODEL_STATUS_LOADED || status == SERVER_MODEL_STATUS_LOADING || status == SERVER_MODEL_STATUS_SLEEPING;
+        return llama_server_model_status_is_running_rust(status);
     }
 
     bool is_failed() const {
-        return status == SERVER_MODEL_STATUS_UNLOADED && exit_code != 0;
+        return llama_server_model_status_is_failed_rust(status, exit_code);
     }
 
     void update_args(common_preset_context & ctx_presets, std::string bin_path);
@@ -824,33 +838,15 @@ struct server_task {
     }
 
     bool need_embd() const {
-        switch (type) {
-            case SERVER_TASK_TYPE_EMBEDDING:
-            case SERVER_TASK_TYPE_RERANK:
-                return true;
-            default:
-                return false;
-        }
+        return llama_server_task_need_embd_rust(type);
     }
 
     bool need_logits() const {
-        switch (type) {
-            case SERVER_TASK_TYPE_COMPLETION:
-            case SERVER_TASK_TYPE_INFILL:
-                return true;
-            default:
-                return false;
-        }
+        return llama_server_task_need_logits_rust(type);
     }
 
     bool need_sampling() const {
-        switch (type) {
-            case SERVER_TASK_TYPE_COMPLETION:
-            case SERVER_TASK_TYPE_INFILL:
-                return true;
-            default:
-                return false;
-        }
+        return llama_server_task_need_sampling_rust(type);
     }
 
     static task_params params_from_json_cmpl(
@@ -898,11 +894,11 @@ struct server_task {
     }
 
     bool is_parent() const {
-        return child_tasks.size() > 0;
+        return llama_server_task_is_parent_rust(child_tasks.size());
     }
 
     bool is_child() const {
-        return id_parent != -1;
+        return llama_server_task_is_child_rust(id_parent);
     }
 };
 
@@ -3058,7 +3054,7 @@ void server_models::unload_lru() {
         {
             std::unique_lock<std::mutex> lk(mutex);
             cv.wait(lk, [this, &lru_model_name]() {
-                return mapping[lru_model_name].meta.status == SERVER_MODEL_STATUS_UNLOADED;
+                return llama_server_model_status_is_unloaded_rust(mapping[lru_model_name].meta.status);
             });
         }
     }
@@ -3073,7 +3069,7 @@ void server_models::load(const std::string & name) {
     std::lock_guard<std::mutex> lk(mutex);
 
     auto meta = mapping[name].meta;
-    if (meta.status != SERVER_MODEL_STATUS_UNLOADED) {
+    if (!llama_server_model_status_is_unloaded_rust(meta.status)) {
         SRV_INF("model %s is not ready\n", name.c_str());
         return;
     }
@@ -3248,7 +3244,7 @@ void server_models::unload(const std::string & name) {
         if (it->second.meta.is_running()) {
             SRV_INF("stopping model instance name=%s\n", name.c_str());
             stopping_models.insert(name);
-            if (it->second.meta.status == SERVER_MODEL_STATUS_LOADING) {
+            if (llama_server_model_status_is_loading_rust(it->second.meta.status)) {
                 // special case: if model is in loading state, unloading means force-killing it
                 SRV_WRN("model name=%s is still loading, force-killing\n", name.c_str());
                 subprocess_terminate(it->second.subproc.get());
@@ -3299,7 +3295,7 @@ void server_models::wait_until_loading_finished(const std::string & name) {
     cv.wait(lk, [this, &name]() {
         auto it = mapping.find(name);
         if (it != mapping.end()) {
-            return it->second.meta.status != SERVER_MODEL_STATUS_LOADING;
+            return !llama_server_model_status_is_loading_rust(it->second.meta.status);
         }
         return false;
     });
@@ -3313,10 +3309,10 @@ bool server_models::ensure_model_ready(const std::string & name) {
     if (meta->is_ready()) {
         return false; // ready for taking requests
     }
-    if (meta->status == SERVER_MODEL_STATUS_SLEEPING) {
+    if (llama_server_model_status_is_sleeping_rust(meta->status)) {
         return false; // child is sleeping but still running; new request will wake it up
     }
-    if (meta->status == SERVER_MODEL_STATUS_UNLOADED) {
+    if (llama_server_model_status_is_unloaded_rust(meta->status)) {
         SRV_INF("model name=%s is not loaded, loading...\n", name.c_str());
         load(name);
     }
@@ -3453,11 +3449,7 @@ static bool router_validate_model(std::string & name, server_models & models, bo
 
 static bool is_autoload(const common_params & params, const server_http_req & req) {
     std::string autoload = req.get_param("autoload");
-    if (autoload.empty()) {
-        return params.models_autoload;
-    } else {
-        return autoload == "true" || autoload == "1";
-    }
+    return llama_server_is_autoload_rust(params.models_autoload, (const uint8_t *) autoload.data(), autoload.size());
 }
 
 void server_models_routes::init_routes() {
@@ -3644,14 +3636,15 @@ static std::string build_multipart_body(
         const json & form_fields,
         const std::map<std::string, uploaded_file> & files,
         const std::string & boundary) {
-    static auto sanitize_field = [](const std::string & text) {
-        std::string result;
-        result.reserve(text.size());
-        for (char c : text) {
-            if (c != '\n' && c != '\r' && c != '"') {
-                result += c;
-            }
+    static auto sanitize_field = [](const std::string & text) -> std::string {
+        size_t out_len = 0;
+        uint8_t * data = llama_server_sanitize_multipart_field_rust(
+                (const uint8_t *) text.data(), text.size(), &out_len);
+        if (data == nullptr) {
+            return {};
         }
+        std::string result((const char *) data, out_len);
+        llama_server_base64_free(data, out_len);
         return result;
     };
 

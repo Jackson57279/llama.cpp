@@ -25,6 +25,168 @@
 
 using json = nlohmann::ordered_json;
 
+struct server_rust_string_view {
+    const uint8_t * data;
+    size_t len;
+};
+
+struct server_rust_sse_event_view {
+    server_rust_string_view event;
+    server_rust_string_view data;
+};
+
+struct server_rust_anthropic_sse_event_view {
+    server_rust_string_view event;
+    server_rust_string_view data;
+    uint8_t has_event;
+};
+
+struct server_rust_result_timings_view {
+    int32_t cache_n;
+    int32_t prompt_n;
+    double prompt_ms;
+    double prompt_per_token_ms;
+    double prompt_per_second;
+    int32_t predicted_n;
+    double predicted_ms;
+    double predicted_per_token_ms;
+    double predicted_per_second;
+    int32_t draft_n;
+    int32_t draft_n_accepted;
+};
+
+extern "C" bool llama_server_lora_all_alora_rust(const float * scales, const uint8_t * is_alora, size_t len);
+extern "C" bool llama_server_lora_should_clear_cache_rust(
+        bool current_has_enabled,
+        bool current_all_alora,
+        bool next_all_alora);
+extern "C" bool llama_server_lora_are_equal_rust(
+        const float * left_scales, const uintptr_t * left_ptrs, size_t left_len,
+        const float * right_scales, const uintptr_t * right_ptrs, size_t right_len);
+extern "C" size_t llama_server_lora_enabled_ids_rust(
+        const float * scales, size_t len,
+        size_t * out, size_t out_len);
+extern "C" bool llama_server_json_flags_all_numbers_rust(const uint8_t * flags, size_t len);
+extern "C" bool llama_server_json_flags_mixed_numbers_strings_rust(const uint8_t * flags, size_t len);
+extern "C" bool llama_server_json_flags_contains_number_rust(const uint8_t * flags, size_t len);
+extern "C" uint8_t * llama_server_format_token_output_rust(
+        const uint8_t * data, size_t len,
+        size_t * out_len);
+extern "C" uint8_t * llama_server_format_oai_sse_rust(
+        const server_rust_string_view * items, size_t len,
+        size_t * out_len);
+extern "C" uint8_t * llama_server_format_oai_resp_sse_rust(
+        const server_rust_sse_event_view * items, size_t len,
+        size_t * out_len);
+extern "C" uint8_t * llama_server_format_anthropic_sse_rust(
+        const server_rust_anthropic_sse_event_view * items, size_t len,
+        size_t * out_len);
+extern "C" size_t llama_server_token_common_prefix_rust(
+        const llama_token * left, size_t left_len,
+        const llama_token * right, size_t right_len);
+extern "C" size_t llama_server_filter_text_tokens_rust(
+        const llama_token * input, size_t input_len,
+        llama_token * out, size_t out_len);
+extern "C" uint8_t * llama_server_tokens_debug_string_rust(
+        const llama_token * tokens, size_t tokens_len,
+        const size_t * media_indices, size_t media_indices_len,
+        size_t * out_len);
+extern "C" bool llama_server_tokens_valid_range_rust(
+        const llama_token * tokens, size_t tokens_len,
+        int32_t n_vocab);
+extern "C" int32_t llama_server_tokens_pos_next_rust(
+        size_t token_len,
+        int64_t n_tokens,
+        const size_t * media_indices,
+        const int32_t * media_n_pos,
+        const size_t * media_n_tokens,
+        size_t media_len);
+extern "C" size_t llama_server_tokens_size_up_to_pos_rust(
+        size_t token_len,
+        int32_t max_pos,
+        const size_t * media_indices,
+        const int32_t * media_n_pos,
+        const size_t * media_n_tokens,
+        size_t media_len);
+extern "C" bool llama_server_task_need_embd_rust(int32_t task_type);
+extern "C" bool llama_server_task_need_logits_rust(int32_t task_type);
+extern "C" bool llama_server_task_need_sampling_rust(int32_t task_type);
+extern "C" bool llama_server_task_is_cancel_rust(int32_t task_type);
+extern "C" bool llama_server_task_is_completion_rust(int32_t task_type);
+extern "C" bool llama_server_task_is_embedding_rust(int32_t task_type);
+extern "C" bool llama_server_task_is_rerank_rust(int32_t task_type);
+extern "C" bool llama_server_task_is_completion_or_infill_rust(int32_t task_type);
+extern "C" bool llama_server_response_type_is_oai_embd_rust(int32_t response_type);
+extern "C" bool llama_server_response_type_is_non_native_rust(int32_t response_type);
+extern "C" bool llama_server_response_type_is_oai_chat_or_cmpl_rust(int32_t response_type);
+extern "C" bool llama_server_response_type_is_anthropic_rust(int32_t response_type);
+extern "C" bool llama_server_response_type_is_oai_resp_rust(int32_t response_type);
+extern "C" bool llama_server_response_type_stream_done_is_empty_rust(int32_t response_type);
+extern "C" bool llama_server_task_is_parent_rust(size_t child_task_count);
+extern "C" bool llama_server_task_is_child_rust(int32_t id_parent);
+extern "C" size_t llama_server_unique_task_ids_rust(
+        const int32_t * ids, size_t ids_len,
+        int32_t * out, size_t out_len);
+extern "C" bool llama_server_slot_is_processing_rust(int32_t slot_state);
+extern "C" bool llama_server_slot_has_budget_rust(
+        int32_t task_n_predict,
+        int32_t global_n_predict,
+        int32_t n_decoded,
+        int32_t * out_n_remaining);
+extern "C" bool llama_server_slot_can_split_rust(
+        bool need_embd,
+        bool has_memory,
+        bool pooling_is_last);
+extern "C" int32_t llama_server_slot_n_draft_max_rust(
+        bool has_spec,
+        int32_t n_draft_min,
+        int32_t n_draft_max,
+        int32_t n_ctx,
+        int32_t prompt_tokens,
+        int32_t n_remaining);
+extern "C" bool llama_server_slot_can_batch_with_rust(
+        int32_t task_type,
+        int32_t other_task_type,
+        bool lora_equal);
+extern "C" size_t llama_server_prompt_size_rust(
+        size_t data_len,
+        const size_t * checkpoint_sizes,
+        size_t checkpoint_count);
+extern "C" size_t llama_server_sum_usize_rust(const size_t * values, size_t len);
+extern "C" size_t llama_server_tokens_len_rust(size_t token_count);
+extern "C" bool llama_server_tokens_is_empty_rust(size_t token_count);
+extern "C" int32_t llama_server_tokens_len_i32_rust(size_t token_count);
+extern "C" bool llama_server_json_field_is_array_rust(bool has_key, bool is_array);
+extern "C" bool llama_server_json_field_is_string_rust(bool has_key, bool is_string);
+extern "C" bool llama_server_queue_should_process_rust(bool running, bool queue_empty);
+extern "C" bool llama_server_queue_sleep_wait_done_rust(bool running, bool req_stop_sleeping);
+extern "C" bool llama_server_queue_task_wait_done_rust(bool running, bool queue_empty);
+extern "C" bool llama_server_queue_should_sleep_rust(
+        int64_t idle_sleep_ms,
+        int64_t now_ms,
+        int64_t time_last_task_ms);
+extern "C" bool llama_server_response_reader_has_next_rust(
+        bool cancelled,
+        size_t received_count,
+        size_t task_count);
+extern "C" server_rust_result_timings_view llama_server_slot_timings_rust(
+        int32_t cache_n,
+        int32_t prompt_n,
+        double prompt_ms,
+        int32_t predicted_n,
+        double predicted_ms,
+        int32_t draft_n,
+        int32_t draft_n_accepted);
+extern "C" bool llama_server_score_desc_rust(double left, double right);
+extern "C" bool llama_server_logit_desc_rust(float left, float right);
+extern "C" bool llama_server_line_start_desc_rust(int32_t left, int32_t right);
+extern "C" bool llama_server_id_matches_rust(int32_t left, int32_t right);
+extern "C" bool llama_server_http_res_is_stream_rust(bool has_next);
+extern "C" bool llama_server_checkpoint_before_threshold_rust(int32_t pos_min, int32_t pos_min_threshold);
+extern "C" bool llama_server_model_status_is_ready_rust(int32_t status);
+extern "C" bool llama_server_model_status_is_running_rust(int32_t status);
+extern "C" bool llama_server_model_status_is_failed_rust(int32_t status, int32_t exit_code);
+
 #define SLT_INF(slot, fmt, ...) LOG_INF("slot %12.*s: id %2d | task %d | " fmt, 12, __func__, (slot).id, ((slot).task ? (slot).task->id : -1), __VA_ARGS__)
 #define SLT_CNT(slot, fmt, ...) LOG_CNT(""                                 fmt,                                                                __VA_ARGS__)
 #define SLT_WRN(slot, fmt, ...) LOG_WRN("slot %12.*s: id %2d | task %d | " fmt, 12, __func__, (slot).id, ((slot).task ? (slot).task->id : -1), __VA_ARGS__)
@@ -38,6 +200,18 @@ using json = nlohmann::ordered_json;
 #define SRV_DBG(fmt, ...) LOG_DBG("srv  %12.*s: " fmt, 12, __func__, __VA_ARGS__)
 
 using raw_buffer = std::vector<uint8_t>;
+
+static std::vector<uint8_t> json_array_type_flags(const json & data) {
+    std::vector<uint8_t> flags;
+    if (!data.is_array()) {
+        return flags;
+    }
+    flags.reserve(data.size());
+    for (const auto & e : data) {
+        flags.push_back(e.is_number_integer() ? 1 : (e.is_string() ? 2 : 0));
+    }
+    return flags;
+}
 
 // generator-like API for HTTP response generation
 // this object response with one of the 2 modes:
@@ -54,7 +228,7 @@ struct server_http_res {
     // TODO: move this to a virtual function once we have proper polymorphism support
     std::function<bool(std::string &)> next = nullptr;
     bool is_stream() const {
-        return next != nullptr;
+        return llama_server_http_res_is_stream_rust(next != nullptr);
     }
 
     virtual ~server_http_res() = default;
@@ -146,15 +320,15 @@ struct server_model_meta {
     int stop_timeout = 0; // seconds to wait before force-killing the model instance during shutdown
 
     bool is_ready() const {
-        return status == SERVER_MODEL_STATUS_LOADED;
+        return llama_server_model_status_is_ready_rust(status);
     }
 
     bool is_running() const {
-        return status == SERVER_MODEL_STATUS_LOADED || status == SERVER_MODEL_STATUS_LOADING || status == SERVER_MODEL_STATUS_SLEEPING;
+        return llama_server_model_status_is_running_rust(status);
     }
 
     bool is_failed() const {
-        return status == SERVER_MODEL_STATUS_UNLOADED && exit_code != 0;
+        return llama_server_model_status_is_failed_rust(status, exit_code);
     }
 
     void update_args(common_preset_context & ctx_presets, std::string bin_path);
@@ -469,9 +643,9 @@ public:
     // for compatibility with speculative decoding
     void set_token(llama_pos pos, llama_token id);
 
-    size_t size() const { return tokens.size(); }
+    size_t size() const { return llama_server_tokens_len_rust(tokens.size()); }
 
-    bool empty() const { return tokens.empty(); }
+    bool empty() const { return llama_server_tokens_is_empty_rust(tokens.size()); }
 
     void clear() {
         map_idx_to_media.clear();
@@ -817,37 +991,19 @@ struct server_task {
     server_task(server_task_type type) : type(type) {}
 
     int32_t n_tokens() const {
-        return tokens.size();
+        return llama_server_tokens_len_i32_rust(tokens.size());
     }
 
     bool need_embd() const {
-        switch (type) {
-            case SERVER_TASK_TYPE_EMBEDDING:
-            case SERVER_TASK_TYPE_RERANK:
-                return true;
-            default:
-                return false;
-        }
+        return llama_server_task_need_embd_rust(type);
     }
 
     bool need_logits() const {
-        switch (type) {
-            case SERVER_TASK_TYPE_COMPLETION:
-            case SERVER_TASK_TYPE_INFILL:
-                return true;
-            default:
-                return false;
-        }
+        return llama_server_task_need_logits_rust(type);
     }
 
     bool need_sampling() const {
-        switch (type) {
-            case SERVER_TASK_TYPE_COMPLETION:
-            case SERVER_TASK_TYPE_INFILL:
-                return true;
-            default:
-                return false;
-        }
+        return llama_server_task_need_sampling_rust(type);
     }
 
     static task_params params_from_json_cmpl(
@@ -859,14 +1015,19 @@ struct server_task {
 
     // utility function
     static std::unordered_set<int> get_list_id(const std::vector<server_task> & tasks) {
-        std::unordered_set<int> ids(tasks.size());
-        for (size_t i = 0; i < tasks.size(); i++) {
-            ids.insert(tasks[i].id);
-            for (auto & child : tasks[i].child_tasks) {
-                ids.insert(child.id);
+        std::vector<int32_t> raw_ids;
+        raw_ids.reserve(tasks.size());
+        for (const auto & task : tasks) {
+            raw_ids.push_back(task.id);
+            for (const auto & child : task.child_tasks) {
+                raw_ids.push_back(child.id);
             }
         }
-        return ids;
+        std::vector<int32_t> unique_ids(raw_ids.size());
+        const size_t n_unique = llama_server_unique_task_ids_rust(
+                raw_ids.data(), raw_ids.size(),
+                unique_ids.data(), unique_ids.size());
+        return std::unordered_set<int>(unique_ids.begin(), unique_ids.begin() + n_unique);
     }
 
     void add_child(int id_parent, int id_child) {
@@ -895,11 +1056,11 @@ struct server_task {
     }
 
     bool is_parent() const {
-        return child_tasks.size() > 0;
+        return llama_server_task_is_parent_rust(child_tasks.size());
     }
 
     bool is_child() const {
-        return id_parent != -1;
+        return llama_server_task_is_child_rust(id_parent);
     }
 };
 
@@ -1241,17 +1402,16 @@ struct server_prompt {
     std::list<server_prompt_checkpoint> checkpoints;
 
     size_t size() const {
-        size_t res = data.size();
-
+        std::vector<size_t> checkpoint_sizes;
+        checkpoint_sizes.reserve(checkpoints.size());
         for (const auto & checkpoint : checkpoints) {
-            res += checkpoint.size();
+            checkpoint_sizes.push_back(checkpoint.size());
         }
-
-        return res;
+        return llama_server_prompt_size_rust(data.size(), checkpoint_sizes.data(), checkpoint_sizes.size());
     }
 
     int n_tokens() const {
-        return tokens.size();
+        return llama_server_tokens_len_i32_rust(tokens.size());
     }
 
     server_prompt clone() const {
@@ -1626,8 +1786,15 @@ private:
 
 extern "C" {
 uint8_t * llama_server_base64_encode(const uint8_t * data, size_t len, size_t * out_len);
+uint8_t * llama_server_base64_decode(const uint8_t * data, size_t len, size_t * out_len);
 void      llama_server_base64_free(uint8_t * data, size_t len);
 uint64_t  llama_server_fnv_hash_rust(const uint8_t * data, size_t len);
+int       llama_server_normalize_anthropic_billing_header_rust(uint8_t * data, size_t len);
+float     llama_server_probability_logarithm_rust(float value);
+size_t    llama_server_validate_utf8_prefix_len_rust(const uint8_t * data, size_t len);
+bool      llama_server_is_valid_utf8_rust(const uint8_t * data, size_t len);
+const char * llama_server_stop_type_to_string_rust(int stop_type);
+size_t    llama_server_copy_string_bytes_rust(const uint8_t * data, size_t len, uint8_t * out, size_t out_len);
 }
 
 json format_error_response(const std::string & message, const enum error_type type) {
@@ -1718,16 +1885,15 @@ const char * get_media_marker() {
 //
 
 bool lora_all_alora(const std::vector<common_adapter_lora_info> & loras) {
-    bool found_alora = false;
+    std::vector<float> scales;
+    std::vector<uint8_t> is_alora;
+    scales.reserve(loras.size());
+    is_alora.reserve(loras.size());
     for (const auto & lora : loras) {
-        if (lora.scale != 0) {
-            if (llama_adapter_get_alora_n_invocation_tokens(lora.ptr) == 0) {
-                return false;
-            }
-            found_alora = true;
-        }
+        scales.push_back(lora.scale);
+        is_alora.push_back(llama_adapter_get_alora_n_invocation_tokens(lora.ptr) != 0 ? 1 : 0);
     }
-    return found_alora;
+    return llama_server_lora_all_alora_rust(scales.data(), is_alora.data(), loras.size());
 }
 
 bool lora_should_clear_cache(
@@ -1739,9 +1905,10 @@ bool lora_should_clear_cache(
     // should be safe to remove as long as this method is called correctly.
     GGML_ASSERT(!are_lora_equal(current, next));
 
-    return (
-        !(lora_get_enabled_ids(current).empty() || lora_all_alora(current)) ||
-        !lora_all_alora(next));
+    return llama_server_lora_should_clear_cache_rust(
+            !lora_get_enabled_ids(current).empty(),
+            lora_all_alora(current),
+            lora_all_alora(next));
 }
 
 std::map<int, float> parse_lora_request(const json & data) {
@@ -1760,90 +1927,52 @@ std::map<int, float> parse_lora_request(const json & data) {
 bool are_lora_equal(
         const std::vector<common_adapter_lora_info> & l1,
         const std::vector<common_adapter_lora_info> & l2) {
-    if (l1.size() != l2.size()) {
-        return false;
+    std::vector<float> left_scales;
+    std::vector<float> right_scales;
+    std::vector<uintptr_t> left_ptrs;
+    std::vector<uintptr_t> right_ptrs;
+    left_scales.reserve(l1.size());
+    right_scales.reserve(l2.size());
+    left_ptrs.reserve(l1.size());
+    right_ptrs.reserve(l2.size());
+    for (const auto & lora : l1) {
+        left_scales.push_back(lora.scale);
+        left_ptrs.push_back((uintptr_t) lora.ptr);
     }
-    for (size_t i = 0; i < l1.size(); ++i) {
-        // we don't check lora.path to reduce the time complexity
-        if (l1[i].scale != l2[i].scale || l1[i].ptr != l2[i].ptr) {
-            return false;
-        }
+    for (const auto & lora : l2) {
+        right_scales.push_back(lora.scale);
+        right_ptrs.push_back((uintptr_t) lora.ptr);
     }
-    return true;
+    // we don't check lora.path to reduce the time complexity
+    return llama_server_lora_are_equal_rust(
+            left_scales.data(), left_ptrs.data(), left_scales.size(),
+            right_scales.data(), right_ptrs.data(), right_scales.size());
 }
 
 std::vector<size_t> lora_get_enabled_ids(const std::vector<common_adapter_lora_info> & loras) {
+    std::vector<float> scales;
     std::vector<size_t> enabled_ids;
-    for (size_t i = 0; i < loras.size(); ++i) {
-        if (loras[i].scale > 0) {
-            enabled_ids.push_back(i);
-        }
+    scales.reserve(loras.size());
+    enabled_ids.resize(loras.size());
+    for (const auto & lora : loras) {
+        scales.push_back(lora.scale);
     }
+    const size_t n_enabled = llama_server_lora_enabled_ids_rust(
+            scales.data(), scales.size(),
+            enabled_ids.data(), enabled_ids.size());
+    enabled_ids.resize(n_enabled);
     return enabled_ids;
 }
 
-//
-// base64 utils (TODO: use the base64::decode from base64.hpp)
-//
-
-static const std::string base64_chars =
-             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-             "abcdefghijklmnopqrstuvwxyz"
-             "0123456789+/";
-
-static inline bool is_base64(uint8_t c) {
-    return (isalnum(c) || (c == '+') || (c == '/'));
-}
-
 static inline raw_buffer base64_decode(const std::string & encoded_string) {
-    int i = 0;
-    int j = 0;
-    int in_ = 0;
-
-    int in_len = encoded_string.size();
-
-    uint8_t char_array_4[4];
-    uint8_t char_array_3[3];
-
-    raw_buffer ret;
-
-    while (in_len-- && (encoded_string[in_] != '=') && is_base64(encoded_string[in_])) {
-        char_array_4[i++] = encoded_string[in_]; in_++;
-        if (i == 4) {
-            for (i = 0; i < 4; i++) {
-                char_array_4[i] = base64_chars.find(char_array_4[i]);
-            }
-
-            char_array_3[0] = ((char_array_4[0]      ) << 2) + ((char_array_4[1] & 0x30) >> 4);
-            char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
-            char_array_3[2] = ((char_array_4[2] & 0x3) << 6) +   char_array_4[3];
-
-            for (i = 0; (i < 3); i++) {
-                ret.push_back(char_array_3[i]);
-            }
-
-            i = 0;
-        }
+    size_t out_len = 0;
+    uint8_t * data = llama_server_base64_decode(
+            reinterpret_cast<const uint8_t *>(encoded_string.data()), encoded_string.size(), &out_len);
+    if (data == nullptr) {
+        return {};
     }
-
-    if (i) {
-        for (j = i; j < 4; j++) {
-            char_array_4[j] = 0;
-        }
-
-        for (j = 0; j < 4; j++) {
-            char_array_4[j] = base64_chars.find(char_array_4[j]);
-        }
-
-        char_array_3[0] = ((char_array_4[0]      ) << 2) + ((char_array_4[1] & 0x30) >> 4);
-        char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
-        char_array_3[2] = ((char_array_4[2] & 0x3) << 6) +   char_array_4[3];
-
-        for (j = 0; j < i - 1; j++) {
-            ret.push_back(char_array_3[j]);
-        }
-    }
-
+    raw_buffer ret(data, data + out_len);
+    llama_server_base64_free(data, out_len);
     return ret;
 }
 
@@ -1862,95 +1991,77 @@ server_tokens::server_tokens(const llama_tokens & tokens, bool has_mtmd) : has_m
 
 llama_pos server_tokens::pos_next(int64_t n_tokens) const {
     if (!has_mtmd) {
-        if (n_tokens < 0) {
-            return tokens.size();
-        }
-
-        return n_tokens;
+        return llama_server_tokens_pos_next_rust(tokens.size(), n_tokens, nullptr, nullptr, nullptr, 0);
     }
-
-    if (n_tokens < 0) {
-        llama_pos res = tokens.size();
-
-        for (auto it = map_idx_to_media.begin(); it != map_idx_to_media.end(); ++it) {
-            const auto & chunk = it->second;
-            res += mtmd_input_chunk_get_n_pos(chunk.get()) - mtmd_input_chunk_get_n_tokens(chunk.get());
-        }
-
-        return res;
-    }
-
-    int64_t idx = 0;
-    llama_pos pos = 0;
 
     GGML_ASSERT(n_tokens <= (int64_t)tokens.size());
 
-    while (idx < n_tokens) {
-        const auto media_it = map_idx_to_media.find(idx);
-        if (media_it != map_idx_to_media.end()) {
-            const auto & chunk = media_it->second;
-            const llama_pos n_pos = mtmd_input_chunk_get_n_pos(chunk.get());
-            const size_t n_tok = mtmd_input_chunk_get_n_tokens(chunk.get());
-
-            pos += n_pos;
-            idx += n_tok;
-        } else {
-            pos++;
-            idx++;
-        }
+    std::vector<size_t> media_indices;
+    std::vector<int32_t> media_n_pos;
+    std::vector<size_t> media_n_tokens;
+    media_indices.reserve(map_idx_to_media.size());
+    media_n_pos.reserve(map_idx_to_media.size());
+    media_n_tokens.reserve(map_idx_to_media.size());
+    for (const auto & it : map_idx_to_media) {
+        const auto & chunk = it.second;
+        media_indices.push_back(it.first);
+        media_n_pos.push_back(mtmd_input_chunk_get_n_pos(chunk.get()));
+        media_n_tokens.push_back(mtmd_input_chunk_get_n_tokens(chunk.get()));
     }
 
-    return pos;
+    return llama_server_tokens_pos_next_rust(
+            tokens.size(),
+            n_tokens,
+            media_indices.data(),
+            media_n_pos.data(),
+            media_n_tokens.data(),
+            media_indices.size());
 }
 
 size_t server_tokens::size_up_to_pos(llama_pos max_pos) const {
     if (!has_mtmd) {
-        return std::min((size_t)max_pos, tokens.size());
+        return llama_server_tokens_size_up_to_pos_rust(tokens.size(), max_pos, nullptr, nullptr, nullptr, 0);
     }
 
-    size_t idx = 0;
-    llama_pos pos = 0;
-
-    while (idx < tokens.size()) {
-        const auto media_it = map_idx_to_media.find(idx);
-        if (media_it != map_idx_to_media.end()) {
-            const auto & chunk = media_it->second;
-            const llama_pos n_pos = mtmd_input_chunk_get_n_pos(chunk.get());
-            const size_t n_tok = mtmd_input_chunk_get_n_tokens(chunk.get());
-
-            pos += n_pos;
-            idx += n_tok;
-        } else {
-            pos++;
-            idx++;
-        }
-
-        if (pos >= max_pos) {
-            break;
-        }
+    std::vector<size_t> media_indices;
+    std::vector<int32_t> media_n_pos;
+    std::vector<size_t> media_n_tokens;
+    media_indices.reserve(map_idx_to_media.size());
+    media_n_pos.reserve(map_idx_to_media.size());
+    media_n_tokens.reserve(map_idx_to_media.size());
+    for (const auto & it : map_idx_to_media) {
+        const auto & chunk = it.second;
+        media_indices.push_back(it.first);
+        media_n_pos.push_back(mtmd_input_chunk_get_n_pos(chunk.get()));
+        media_n_tokens.push_back(mtmd_input_chunk_get_n_tokens(chunk.get()));
     }
 
-    return idx;
+    return llama_server_tokens_size_up_to_pos_rust(
+            tokens.size(),
+            max_pos,
+            media_indices.data(),
+            media_n_pos.data(),
+            media_n_tokens.data(),
+            media_indices.size());
 }
 
 std::string server_tokens::str() const {
-    std::ostringstream oss;
-    oss << "tokens: ";
-    for (size_t idx = 0; idx < tokens.size(); ++idx) {
-        llama_token t = tokens[idx];
-        oss << "idx:" << idx << " ";
-        if (t == LLAMA_TOKEN_NULL) {
-            oss << "<embd> ";
-        } else {
-            oss << t << " ";
-        }
-    }
-    oss << "\n";
-    oss << "image idx: ";
+    std::vector<size_t> media_indices;
+    media_indices.reserve(map_idx_to_media.size());
     for (const auto & it : map_idx_to_media) {
-        oss << it.first << ", ";
+        media_indices.push_back(it.first);
     }
-    return oss.str();
+    size_t out_len = 0;
+    uint8_t * out = llama_server_tokens_debug_string_rust(
+            tokens.data(), tokens.size(),
+            media_indices.data(), media_indices.size(),
+            &out_len);
+    if (out == nullptr) {
+        return "";
+    }
+    std::string result((const char *) out, out_len);
+    llama_server_base64_free(out, out_len);
+    return result;
 }
 
 const mtmd::input_chunk_ptr & server_tokens::find_chunk(size_t idx) const {
@@ -2017,13 +2128,11 @@ const llama_tokens & server_tokens::get_tokens() const {
 }
 
 llama_tokens server_tokens::get_text_tokens() const {
-    llama_tokens res;
-    res.reserve(tokens.size());
-    for (llama_token t : tokens) {
-        if (t != LLAMA_TOKEN_NULL) {
-            res.push_back(t);
-        }
-    }
+    llama_tokens res(tokens.size());
+    const size_t n_text = llama_server_filter_text_tokens_rust(
+            tokens.data(), tokens.size(),
+            res.data(), res.size());
+    res.resize(n_text);
     return res;
 }
 
@@ -2066,13 +2175,7 @@ void server_tokens::keep_first(size_t n) {
 }
 
 std::string server_tokens::detokenize(const llama_context * ctx, bool special) const {
-    llama_tokens text_tokens;
-    text_tokens.reserve(tokens.size());
-    for (const auto & t : tokens) {
-        if (t != LLAMA_TOKEN_NULL) {
-            text_tokens.push_back(t);
-        }
-    }
+    llama_tokens text_tokens = get_text_tokens();
     return common_detokenize(ctx, text_tokens, special);
 }
 
@@ -2080,15 +2183,9 @@ size_t server_tokens::get_common_prefix(const server_tokens & b) const {
     const size_t max_idx = std::min(tokens.size(), b.tokens.size());
 
     if (!has_mtmd) {
-        for (size_t i = 0; i < max_idx; ++i) {
-            if (tokens[i] == b.tokens[i]) {
-                continue;
-            }
-
-            return i;
-        }
-
-        return max_idx;
+        return llama_server_token_common_prefix_rust(
+                tokens.data(), tokens.size(),
+                b.tokens.data(), b.tokens.size());
     }
 
     for (size_t i = 0; i < max_idx; ++i) {
@@ -2141,11 +2238,9 @@ bool server_tokens::validate(const struct llama_context * ctx) const {
             } catch (const std::exception & e) {
                 return false;
             }
-        } else if (t < 0 || t >= n_vocab) {
-            return false;
         }
     }
-    return true;
+    return llama_server_tokens_valid_range_rust(tokens.data(), tokens.size(), n_vocab);
 }
 
 int32_t server_tokens::process_chunk(
@@ -2196,42 +2291,27 @@ server_tokens server_tokens::clone() const {
 //
 
 bool json_is_array_of_numbers(const json & data) {
-    if (data.is_array()) {
-        for (const auto & e : data) {
-            if (!e.is_number_integer()) {
-                return false;
-            }
-        }
-        return true;
+    if (!data.is_array()) {
+        return false;
     }
-    return false;
+    const auto flags = json_array_type_flags(data);
+    return llama_server_json_flags_all_numbers_rust(flags.data(), flags.size());
 }
 
 bool json_is_array_of_mixed_numbers_strings(const json & data) {
-    bool seen_string = false;
-    bool seen_number = false;
-    if (data.is_array()) {
-        for (const auto & e : data) {
-            seen_string |= e.is_string();
-            seen_number |= e.is_number_integer();
-            if (seen_number && seen_string) {
-                return true;
-            }
-        }
+    if (!data.is_array()) {
+        return false;
     }
-    return false;
+    const auto flags = json_array_type_flags(data);
+    return llama_server_json_flags_mixed_numbers_strings_rust(flags.data(), flags.size());
 }
 
 bool json_is_array_and_contains_numbers(const json & data) {
-    if (data.is_array()) {
-        for (const auto & e : data) {
-            if (e.is_number_integer()) {
-                return true;
-            }
-        }
+    if (!data.is_array()) {
         return false;
     }
-    return false;
+    const auto flags = json_array_type_flags(data);
+    return llama_server_json_flags_contains_number_rust(flags.data(), flags.size());
 }
 
 json json_get_nested_values(const std::vector<std::string> & paths, const json & js) {
@@ -2292,30 +2372,7 @@ llama_tokens tokenize_mixed(const llama_vocab * vocab, const json & json_prompt,
 }
 
 size_t validate_utf8(const std::string& text) {
-    size_t len = text.size();
-    if (len == 0) return 0;
-
-    // Check the last few bytes to see if a multi-byte character is cut off
-    for (size_t i = 1; i <= 4 && i <= len; ++i) {
-        unsigned char c = text[len - i];
-        // Check for start of a multi-byte sequence from the end
-        if ((c & 0xE0) == 0xC0) {
-            // 2-byte character start: 110xxxxx
-            // Needs at least 2 bytes
-            if (i < 2) return len - i;
-        } else if ((c & 0xF0) == 0xE0) {
-            // 3-byte character start: 1110xxxx
-            // Needs at least 3 bytes
-            if (i < 3) return len - i;
-        } else if ((c & 0xF8) == 0xF0) {
-            // 4-byte character start: 11110xxx
-            // Needs at least 4 bytes
-            if (i < 4) return len - i;
-        }
-    }
-
-    // If no cut-off multi-byte character is found, return full length
-    return len;
+    return llama_server_validate_utf8_prefix_len_rust((const uint8_t *) text.data(), text.size());
 }
 
 server_tokens process_mtmd_prompt(mtmd_context * mctx, std::string prompt, std::vector<raw_buffer> files) {
@@ -2852,7 +2909,9 @@ json format_response_rerank(
     }
 
     std::sort(elements.begin(), elements.end(), [score_label](const json& a, const json& b) {
-        return json_value(a, score_label, 0.0) > json_value(b, score_label, 0.0);
+        return llama_server_score_desc_rust(
+            json_value(a, score_label, 0.0),
+            json_value(b, score_label, 0.0));
     });
 
     elements.resize(std::min(top_n, (int)elements.size()));
@@ -2899,7 +2958,7 @@ std::vector<llama_token_data> get_token_probabilities(llama_context * ctx, int i
 
     // sort tokens by logits
     std::sort(cur.begin(), cur.end(), [](const llama_token_data & a, const llama_token_data & b) {
-        return a.logit > b.logit;
+        return llama_server_logit_desc_rust(a.logit, b.logit);
     });
 
     // apply softmax
@@ -2944,112 +3003,130 @@ std::string tokens_to_str(const llama_vocab * vocab, const llama_tokens & tokens
 // format incomplete utf-8 multibyte character for output
 std::string tokens_to_output_formatted_string(const llama_context * ctx, const llama_token token) {
     std::string out = token == LLAMA_TOKEN_NULL ? "" : common_token_to_piece(ctx, token);
-
-    // if the size is 1 and first bit is 1, meaning it's a partial character
-    //   (size > 1 meaning it's already a known token)
-    if (out.size() == 1 && (out[0] & 0x80) == 0x80) {
-        std::stringstream ss;
-        ss << std::hex << (out[0] & 0xff);
-        std::string res(ss.str());
-        out = "byte: \\x" + res;
+    size_t out_len = 0;
+    uint8_t * data = llama_server_format_token_output_rust((const uint8_t *) out.data(), out.size(), &out_len);
+    if (data == nullptr) {
+        return "";
     }
-
-    return out;
+    std::string result((const char *) data, out_len);
+    llama_server_base64_free(data, out_len);
+    return result;
 }
 
 // format server-sent event (SSE), return the formatted string to send
 // note: if data is a json array, it will be sent as multiple events, one per item
 std::string format_oai_sse(const json & data) {
-    std::ostringstream ss;
-    auto send_single = [&ss](const json & data) {
-        ss << "data: " <<
-            safe_json_to_str(data) <<
-            "\n\n"; // required by RFC 8895 - A message is terminated by a blank line (two line terminators in a row).
-    };
-
+    std::vector<std::string> serialized;
     if (data.is_array()) {
+        serialized.reserve(data.size());
         for (const auto & item : data) {
-            send_single(item);
+            serialized.push_back(safe_json_to_str(item));
         }
     } else {
-        send_single(data);
+        serialized.push_back(safe_json_to_str(data));
     }
 
-    return ss.str();
+    std::vector<server_rust_string_view> views;
+    views.reserve(serialized.size());
+    for (const auto & item : serialized) {
+        views.push_back({ (const uint8_t *) item.data(), item.size() });
+    }
+
+    size_t out_len = 0;
+    uint8_t * out = llama_server_format_oai_sse_rust(views.data(), views.size(), &out_len);
+    if (out == nullptr) {
+        return "";
+    }
+    std::string result((const char *) out, out_len);
+    llama_server_base64_free(out, out_len);
+    return result;
 }
 
 std::string format_oai_resp_sse(const json & data) {
-    std::ostringstream ss;
-    auto send_single = [&ss](const json & event_obj) {
-        ss << "event: " << event_obj.at("event").get<std::string>() << "\n";
-        ss << "data: " << safe_json_to_str(event_obj.at("data")) << "\n\n";
+    std::vector<std::string> events;
+    std::vector<std::string> payloads;
+    auto collect = [&events, &payloads](const json & event_obj) {
+        events.push_back(event_obj.at("event").get<std::string>());
+        payloads.push_back(safe_json_to_str(event_obj.at("data")));
     };
-
     if (data.is_array()) {
+        events.reserve(data.size());
+        payloads.reserve(data.size());
         for (const auto & item : data) {
-            send_single(item);
+            collect(item);
         }
     } else {
-        send_single(data);
+        collect(data);
     }
 
-    return ss.str();
+    std::vector<server_rust_sse_event_view> views;
+    views.reserve(events.size());
+    for (size_t i = 0; i < events.size(); ++i) {
+        views.push_back({
+                { (const uint8_t *) events[i].data(), events[i].size() },
+                { (const uint8_t *) payloads[i].data(), payloads[i].size() }
+        });
+    }
+
+    size_t out_len = 0;
+    uint8_t * out = llama_server_format_oai_resp_sse_rust(views.data(), views.size(), &out_len);
+    if (out == nullptr) {
+        return "";
+    }
+    std::string result((const char *) out, out_len);
+    llama_server_base64_free(out, out_len);
+    return result;
 }
 
 std::string format_anthropic_sse(const json & data) {
-    std::ostringstream ss;
-
-    auto send_event = [&ss](const json & event_obj) {
+    std::vector<std::string> events;
+    std::vector<std::string> payloads;
+    std::vector<uint8_t> has_events;
+    auto collect = [&events, &payloads, &has_events](const json & event_obj) {
         if (event_obj.contains("event") && event_obj.contains("data")) {
-            ss << "event: " << event_obj.at("event").get<std::string>() << "\n";
-            ss << "data: " << safe_json_to_str(event_obj.at("data")) << "\n\n";
+            events.push_back(event_obj.at("event").get<std::string>());
+            payloads.push_back(safe_json_to_str(event_obj.at("data")));
+            has_events.push_back(1);
         } else {
-            ss << "data: " << safe_json_to_str(event_obj) << "\n\n";
+            events.push_back("");
+            payloads.push_back(safe_json_to_str(event_obj));
+            has_events.push_back(0);
         }
     };
 
     if (data.is_array()) {
+        events.reserve(data.size());
+        payloads.reserve(data.size());
+        has_events.reserve(data.size());
         for (const auto & event : data) {
-            send_event(event);
+            collect(event);
         }
     } else {
-        send_event(data);
+        collect(data);
     }
 
-    return ss.str();
+    std::vector<server_rust_anthropic_sse_event_view> views;
+    views.reserve(events.size());
+    for (size_t i = 0; i < events.size(); ++i) {
+        views.push_back({
+                { (const uint8_t *) events[i].data(), events[i].size() },
+                { (const uint8_t *) payloads[i].data(), payloads[i].size() },
+                has_events[i],
+        });
+    }
+
+    size_t out_len = 0;
+    uint8_t * out = llama_server_format_anthropic_sse_rust(views.data(), views.size(), &out_len);
+    if (out == nullptr) {
+        return "";
+    }
+    std::string result((const char *) out, out_len);
+    llama_server_base64_free(out, out_len);
+    return result;
 }
 
 bool is_valid_utf8(const std::string & str) {
-    const unsigned char* bytes = reinterpret_cast<const unsigned char*>(str.data());
-    const unsigned char* end = bytes + str.length();
-
-    while (bytes < end) {
-        if (*bytes <= 0x7F) {
-            // 1-byte sequence (0xxxxxxx)
-            bytes++;
-        } else if ((*bytes & 0xE0) == 0xC0) {
-            // 2-byte sequence (110xxxxx 10xxxxxx)
-            if (end - bytes < 2 || (bytes[1] & 0xC0) != 0x80)
-                return false;
-            bytes += 2;
-        } else if ((*bytes & 0xF0) == 0xE0) {
-            // 3-byte sequence (1110xxxx 10xxxxxx 10xxxxxx)
-            if (end - bytes < 3 || (bytes[1] & 0xC0) != 0x80 || (bytes[2] & 0xC0) != 0x80)
-                return false;
-            bytes += 3;
-        } else if ((*bytes & 0xF8) == 0xF0) {
-            // 4-byte sequence (11110xxx 10xxxxxx 10xxxxxx 10xxxxxx)
-            if (end - bytes < 4 || (bytes[1] & 0xC0) != 0x80 ||
-                (bytes[2] & 0xC0) != 0x80 || (bytes[3] & 0xC0) != 0x80)
-                return false;
-            bytes += 4;
-        } else {
-            // Invalid UTF-8 lead byte
-            return false;
-        }
-    }
-
-    return true;
+    return llama_server_is_valid_utf8_rust((const uint8_t *) str.data(), str.size());
 }
 
 llama_tokens format_prompt_infill(
@@ -3245,10 +3322,12 @@ json server_chat_convert_responses_to_chatcmpl(const json & response_body) {
         // #responses_create-input-input_item_list
 
         static auto exists_and_is_array = [](const json & j, const char * key) -> bool {
-            return j.contains(key) && j.at(key).is_array();
+            const bool has_key = j.contains(key);
+            return llama_server_json_field_is_array_rust(has_key, has_key && j.at(key).is_array());
         };
         static auto exists_and_is_string = [](const json & j, const char * key) -> bool {
-            return j.contains(key) && j.at(key).is_string();
+            const bool has_key = j.contains(key);
+            return llama_server_json_field_is_string_rust(has_key, has_key && j.at(key).is_string());
         };
 
         for (json item : input_value) {
@@ -3507,23 +3586,9 @@ json server_chat_convert_responses_to_chatcmpl(const json & response_body) {
 //                                                                            ^^^^^
 // ```
 static void normalize_anthropic_billing_header(std::string & system_text) {
-    if (system_text.rfind("x-anthropic-billing-header:", 0) != 0) {
-        return;
-    }
-
-    const size_t header_prefix_length = strlen("x-anthropic-billing-header:");
-    const size_t cch_length = 5;
-    const size_t index_cch = system_text.find("cch=", header_prefix_length);
-    if (index_cch == std::string::npos) {
-        return;
-    }
-
-    const size_t index_replace = index_cch + 4;
-    if (index_replace + cch_length < system_text.length() && system_text[index_replace + cch_length] == ';') {
-        for (size_t i = 0; i < cch_length; ++i) {
-            system_text[index_replace + i] = 'f';
-        }
-    } else {
+    int result = llama_server_normalize_anthropic_billing_header_rust(
+            reinterpret_cast<uint8_t *>(system_text.data()), system_text.size());
+    if (result < 0) {
         LOG_ERR("anthropic string not as expected: %s", system_text.c_str());
     }
 }
@@ -4485,12 +4550,7 @@ json result_prompt_progress::to_json() const {
 }
 
 static inline std::string stop_type_to_str(stop_type type) {
-    switch (type) {
-        case STOP_TYPE_EOS:   return "eos";
-        case STOP_TYPE_WORD:  return "word";
-        case STOP_TYPE_LIMIT: return "limit";
-        default:              return "none";
-    }
+    return llama_server_stop_type_to_string_rust((int) type);
 }
 
 //
@@ -4538,15 +4598,14 @@ json completion_token_output::probs_vector_to_json(const std::vector<completion_
 }
 
 float completion_token_output::logarithm(float x) {
-    // nlohmann::json converts -inf to null, so we need to prevent that
-    return x == 0.0f ? std::numeric_limits<float>::lowest() : std::log(x);
+    return llama_server_probability_logarithm_rust(x);
 }
 
 std::vector<unsigned char> completion_token_output::str_to_bytes(const std::string & str) {
-    std::vector<unsigned char> bytes;
-    for (unsigned char c : str) {
-        bytes.push_back(c);
-    }
+    std::vector<unsigned char> bytes(str.size());
+    const size_t copied = llama_server_copy_string_bytes_rust(
+            reinterpret_cast<const uint8_t *>(str.data()), str.size(), bytes.data(), bytes.size());
+    bytes.resize(copied);
     return bytes;
 }
 
@@ -5659,7 +5718,7 @@ json server_task_result_cmpl_partial::to_json_anthropic() {
 // server_task_result_embd
 //
 json server_task_result_embd::to_json() {
-    return res_type == TASK_RESPONSE_TYPE_OAI_EMBD
+    return llama_server_response_type_is_oai_embd_rust(res_type)
         ? to_json_oaicompat()
         : to_json_non_oaicompat();
 }
@@ -5804,23 +5863,25 @@ json server_task_result_apply_lora::to_json() {
 // server_prompt_cache
 //
 size_t server_prompt_cache::size() const {
-    size_t res = 0;
+    std::vector<size_t> sizes;
+    sizes.reserve(states.size());
 
     for (const auto & state : states) {
-        res += state.size();
+        sizes.push_back(state.size());
     }
 
-    return res;
+    return llama_server_sum_usize_rust(sizes.data(), sizes.size());
 }
 
 size_t server_prompt_cache::n_tokens() const {
-    size_t res = 0;
+    std::vector<size_t> counts;
+    counts.reserve(states.size());
 
     for (const auto & state : states) {
-        res += state.n_tokens();
+        counts.push_back(state.n_tokens());
     }
 
-    return res;
+    return llama_server_sum_usize_rust(counts.data(), counts.size());
 }
 
 server_prompt * server_prompt_cache::alloc(const server_prompt & prompt, size_t state_size) {
@@ -5994,7 +6055,7 @@ int server_queue::post(server_task && task, bool front) {
     std::unique_lock<std::mutex> lock(mutex_tasks);
     GGML_ASSERT(task.id != -1);
     // if this is cancel task make sure to clean up pending tasks
-    if (task.type == SERVER_TASK_TYPE_CANCEL) {
+    if (llama_server_task_is_cancel_rust(task.type)) {
         cleanup_pending_task(task.id_target);
     }
     const int task_id = task.id;
@@ -6016,7 +6077,7 @@ int server_queue::post(std::vector<server_task> && tasks, bool front) {
             task.id = id++;
         }
         // if this is cancel task make sure to clean up pending tasks
-        if (task.type == SERVER_TASK_TYPE_CANCEL) {
+        if (llama_server_task_is_cancel_rust(task.type)) {
             cleanup_pending_task(task.id_target);
         }
         QUE_DBG("new task, id = %d/%d, front = %d\n", task.id, (int) tasks.size(), front);
@@ -6104,7 +6165,7 @@ void server_queue::start_loop(int64_t idle_sleep_ms) {
             return false;
         }
         int64_t now = ggml_time_ms();
-        return (now - time_last_task) >= idle_sleep_ms;
+        return llama_server_queue_should_sleep_rust(idle_sleep_ms, now, time_last_task);
     };
 
     while (true) {
@@ -6141,7 +6202,7 @@ void server_queue::start_loop(int64_t idle_sleep_ms) {
         QUE_DBG("%s", "waiting for new tasks\n");
         while (true) {
             std::unique_lock<std::mutex> lock(mutex_tasks);
-            if (!running || !queue_tasks.empty()) {
+            if (llama_server_queue_should_process_rust(running, queue_tasks.empty())) {
                 break; // go back to process new tasks or terminate
             }
 
@@ -6153,7 +6214,7 @@ void server_queue::start_loop(int64_t idle_sleep_ms) {
                 req_stop_sleeping = false;
                 // wait until we are requested to exit sleeping state
                 condition_tasks.wait(lock, [&]{
-                    return (!running || req_stop_sleeping);
+                    return llama_server_queue_sleep_wait_done_rust(running, req_stop_sleeping);
                 });
                 if (!running) { // may changed during sleep
                     break; // terminate
@@ -6168,7 +6229,7 @@ void server_queue::start_loop(int64_t idle_sleep_ms) {
             } else {
                 // wait for new tasks or timeout for checking sleeping condition
                 bool res = condition_tasks.wait_for(lock, max_wait_time, [&]{
-                    return (!queue_tasks.empty() || !running);
+                    return llama_server_queue_task_wait_done_rust(running, queue_tasks.empty());
                 });
                 if (res) {
                     break; // new task arrived or terminate
@@ -6182,7 +6243,7 @@ void server_queue::start_loop(int64_t idle_sleep_ms) {
 void server_queue::cleanup_pending_task(int id_target) {
     // no need lock because this is called exclusively by post()
     auto rm_func = [id_target](const server_task & task) {
-        return task.id == id_target;
+        return llama_server_id_matches_rust(task.id, id_target);
     };
     queue_tasks.erase(
         std::remove_if(queue_tasks.begin(),          queue_tasks.end(),          rm_func),
@@ -6220,7 +6281,7 @@ void server_response::remove_waiting_task_id(int id_task) {
     // make sure to clean up all pending results
     queue_results.erase(
         std::remove_if(queue_results.begin(), queue_results.end(), [id_task](const server_task_result_ptr & res) {
-            return res->id == id_task;
+            return llama_server_id_matches_rust(res->id, id_task);
         }),
         queue_results.end());
 }
@@ -6341,7 +6402,7 @@ void server_response_reader::post_tasks(std::vector<server_task> && tasks, bool 
 }
 
 bool server_response_reader::has_next() const {
-    return !cancelled && received_count < id_tasks.size();
+    return llama_server_response_reader_has_next_rust(cancelled, received_count, id_tasks.size());
 }
 
 // return nullptr if should_stop() is true before receiving a result
@@ -6680,37 +6741,33 @@ struct server_slot {
     bool can_split() const {
         GGML_ASSERT(task);
 
-        return
-            !task->need_embd() ||
-            (llama_get_memory(ctx) && llama_pooling_type(ctx) == LLAMA_POOLING_TYPE_LAST);
+        return llama_server_slot_can_split_rust(
+                task->need_embd(),
+                llama_get_memory(ctx) != nullptr,
+                llama_pooling_type(ctx) == LLAMA_POOLING_TYPE_LAST);
     }
 
     bool can_batch_with(server_slot & other_slot) const {
         GGML_ASSERT(task);
 
-        return task->type == other_slot.task->type && are_lora_equal(lora, other_slot.lora);
+        return llama_server_slot_can_batch_with_rust(
+                task->type,
+                other_slot.task->type,
+                are_lora_equal(lora, other_slot.lora));
     }
 
     bool has_budget(const common_params & global_params) {
         GGML_ASSERT(task);
 
-        if (task->params.n_predict == -1 && global_params.n_predict == -1) {
-            return true; // limitless
-        }
-
-        n_remaining = -1;
-
-        if (task->params.n_predict != -1) {
-            n_remaining = task->params.n_predict - n_decoded;
-        } else if (global_params.n_predict != -1) {
-            n_remaining = global_params.n_predict - n_decoded;
-        }
-
-        return n_remaining > 0; // no budget
+        return llama_server_slot_has_budget_rust(
+                task->params.n_predict,
+                global_params.n_predict,
+                n_decoded,
+                &n_remaining);
     }
 
     bool is_processing() const {
-        return state != SLOT_STATE_IDLE;
+        return llama_server_slot_is_processing_rust(state);
     }
 
     bool can_speculate() const {
@@ -6734,24 +6791,15 @@ struct server_slot {
         }
 
         const int n_draft_min = common_speculative_n_min(spec.get(), task->params.speculative);
-
-        // determine the max draft that fits the current slot state
-        int n_draft_max = common_speculative_n_max(spec.get(), task->params.speculative);
-
-        // note: slot.prompt is not yet expanded with the `id` token sampled above
-        //       also, need to leave space for 1 extra token to allow context shifts
-        n_draft_max = std::min(n_draft_max, n_ctx - prompt.n_tokens() - 2);
-
-        if (n_remaining > 0) {
-            n_draft_max = std::min(n_draft_max, n_remaining - 1);
-        }
+        const int n_draft_max = llama_server_slot_n_draft_max_rust(
+                true,
+                n_draft_min,
+                common_speculative_n_max(spec.get(), task->params.speculative),
+                n_ctx,
+                prompt.n_tokens(),
+                n_remaining);
 
         SLT_DBG(*this, "max possible draft: %d\n", n_draft_max);
-
-        if (n_draft_max < n_draft_min) {
-            SLT_DBG(*this, "the max possible draft is too small: %d < %d - skipping speculative decoding\n", n_draft_max, n_draft_min);
-            n_draft_max = 0;
-        }
 
         return n_draft_max;
     }
@@ -6852,24 +6900,27 @@ struct server_slot {
     }
 
     result_timings get_timings() const {
+        const server_rust_result_timings_view rust = llama_server_slot_timings_rust(
+                n_prompt_tokens_cache,
+                n_prompt_tokens_processed,
+                t_prompt_processing,
+                n_decoded,
+                t_token_generation,
+                n_draft_total,
+                n_draft_accepted);
+
         result_timings timings;
-        timings.cache_n = n_prompt_tokens_cache;
-
-        timings.prompt_n            = n_prompt_tokens_processed;
-        timings.prompt_ms           = t_prompt_processing;
-        timings.prompt_per_token_ms = t_prompt_processing / n_prompt_tokens_processed;
-        timings.prompt_per_second   = 1e3 / t_prompt_processing * n_prompt_tokens_processed;
-
-        timings.predicted_n            = n_decoded;
-        timings.predicted_ms           = t_token_generation;
-        timings.predicted_per_token_ms = t_token_generation / n_decoded;
-        timings.predicted_per_second   = 1e3 / t_token_generation * n_decoded;
-
-        // Add speculative metrics
-        if (n_draft_total > 0) {
-            timings.draft_n          = n_draft_total;
-            timings.draft_n_accepted = n_draft_accepted;
-        }
+        timings.cache_n                = rust.cache_n;
+        timings.prompt_n               = rust.prompt_n;
+        timings.prompt_ms              = rust.prompt_ms;
+        timings.prompt_per_token_ms    = rust.prompt_per_token_ms;
+        timings.prompt_per_second      = rust.prompt_per_second;
+        timings.predicted_n            = rust.predicted_n;
+        timings.predicted_ms           = rust.predicted_ms;
+        timings.predicted_per_token_ms = rust.predicted_per_token_ms;
+        timings.predicted_per_second   = rust.predicted_per_second;
+        timings.draft_n                = rust.draft_n;
+        timings.draft_n_accepted       = rust.draft_n_accepted;
 
         return timings;
     }
@@ -7582,7 +7633,7 @@ private:
             update_cache = update_cache && prompt_cache;
 
             // cache prompts only for completion tasks
-            update_cache = update_cache && task.type == SERVER_TASK_TYPE_COMPLETION;
+            update_cache = update_cache && llama_server_task_is_completion_rust(task.type);
 
             if (update_cache) {
                 SRV_WRN("%s", "updating prompt cache\n");
@@ -8917,7 +8968,7 @@ private:
                                             // guarantee that a checkpoint will result in at least one token being processed [TAG_PROMPT_LOGITS]
                                             LOG_INF("slot %12.*s: id %2d | task %d | Checking checkpoint with [%d, %d] against %d...\n", 12,
                                                 func_name, (slot).id, ((slot).task ? (slot).task->id : -1), cur.pos_min, cur.pos_max, pos_min_thold);
-                                            return cur.pos_min < pos_min_thold || cur.pos_min == 0;
+                                            return llama_server_checkpoint_before_threshold_rust(cur.pos_min, pos_min_thold);
                                         }
                                     );
 
@@ -9019,7 +9070,7 @@ private:
                     bool do_checkpoint = params_base.n_ctx_checkpoints > 0;
 
                     // make checkpoints only for completion tasks
-                    do_checkpoint = do_checkpoint && slot.task->type == SERVER_TASK_TYPE_COMPLETION;
+                    do_checkpoint = do_checkpoint && llama_server_task_is_completion_rust(slot.task->type);
 
                     // make a checkpoint of the parts of the memory that cannot be rolled back.
                     // checkpoints are created only if:
@@ -9311,7 +9362,7 @@ private:
                 }
 
                 if (slot.state == SLOT_STATE_DONE_PROMPT) {
-                    if (slot.task->type == SERVER_TASK_TYPE_EMBEDDING) {
+                    if (llama_server_task_is_embedding_rust(slot.task->type)) {
                         // prompt evaluated for embedding
                         send_embedding(slot, batch_view);
                         slot.release();
@@ -9319,7 +9370,7 @@ private:
                         continue; // continue loop of slots
                     }
 
-                    if (slot.task->type == SERVER_TASK_TYPE_RERANK) {
+                    if (llama_server_task_is_rerank_rust(slot.task->type)) {
                         send_rerank(slot, batch_view);
                         slot.release();
                         slot.i_batch = -1;
@@ -9612,7 +9663,7 @@ std::unique_ptr<server_res_generator> server_routes::handle_completions_impl(
             const json & data,
             const std::vector<raw_buffer> & files,
             task_response_type res_type) {
-    GGML_ASSERT(type == SERVER_TASK_TYPE_COMPLETION || type == SERVER_TASK_TYPE_INFILL);
+    GGML_ASSERT(llama_server_task_is_completion_or_infill_rust(type));
 
     auto res = create_response();
     auto completion_id = gen_chatcmplid();
@@ -9628,7 +9679,7 @@ std::unique_ptr<server_res_generator> server_routes::handle_completions_impl(
         // process prompt
         std::vector<server_tokens> inputs;
 
-        if (res_type != TASK_RESPONSE_TYPE_NONE && ctx_server.mctx != nullptr) {
+        if (llama_server_response_type_is_non_native_rust(res_type) && ctx_server.mctx != nullptr) {
             // This is the case used by OAI compatible chat path with MTMD. TODO It can be moved to the path below.
             inputs.push_back(process_mtmd_prompt(ctx_server.mctx, prompt.get<std::string>(), files));
         } else {
@@ -9694,7 +9745,7 @@ std::unique_ptr<server_res_generator> server_routes::handle_completions_impl(
             if (arr.size() == 1) {
                 // if single request, return single object instead of array
                 res->ok(arr[0]);
-            } else if (res_type == TASK_RESPONSE_TYPE_OAI_CHAT || res_type == TASK_RESPONSE_TYPE_OAI_CMPL) {
+            } else if (llama_server_response_type_is_oai_chat_or_cmpl_rust(res_type)) {
                 // if multiple results in OAI format, we need to re-format them
                 json & choices = arr[0]["choices"];
                 for (size_t i = 1; i < arr.size(); i++) {
@@ -9729,9 +9780,9 @@ std::unique_ptr<server_res_generator> server_routes::handle_completions_impl(
         // next responses are streamed
         // to be sent immediately
         json first_result_json = first_result->to_json();
-        if (res_type == TASK_RESPONSE_TYPE_ANTHROPIC) {
+        if (llama_server_response_type_is_anthropic_rust(res_type)) {
             res->data = format_anthropic_sse(first_result_json);
-        } else if (res_type == TASK_RESPONSE_TYPE_OAI_RESP) {
+        } else if (llama_server_response_type_is_oai_resp_rust(res_type)) {
             res->data = format_oai_resp_sse(first_result_json);
         } else {
             res->data = format_oai_sse(first_result_json);
@@ -9740,7 +9791,7 @@ std::unique_ptr<server_res_generator> server_routes::handle_completions_impl(
         res->content_type = "text/event-stream";
         res->next = [res_this = res.get(), res_type, &req](std::string & output) -> bool {
             static auto format_error = [](task_response_type res_type, const json & res_json) {
-                if (res_type == TASK_RESPONSE_TYPE_ANTHROPIC) {
+                if (llama_server_response_type_is_anthropic_rust(res_type)) {
                     return format_anthropic_sse({
                         {"event", "error"},
                         {"data", res_json},
@@ -9767,17 +9818,7 @@ std::unique_ptr<server_res_generator> server_routes::handle_completions_impl(
 
                 // check if there is more data
                 if (!rd.has_next()) {
-                    switch (res_type) {
-                        case TASK_RESPONSE_TYPE_NONE:
-                        case TASK_RESPONSE_TYPE_OAI_RESP:
-                        case TASK_RESPONSE_TYPE_ANTHROPIC:
-                            output = "";
-                            break;
-
-                        default:
-                            output = "data: [DONE]\n\n";
-                            break;
-                    }
+                    output = llama_server_response_type_stream_done_is_empty_rust(res_type) ? "" : "data: [DONE]\n\n";
                     SRV_DBG("%s", "all results received, terminating stream\n");
                     return false; // no more data, terminate
                 }
@@ -9802,9 +9843,9 @@ std::unique_ptr<server_res_generator> server_routes::handle_completions_impl(
                         || dynamic_cast<server_task_result_cmpl_final*>(result.get()) != nullptr
                     );
                     json res_json = result->to_json();
-                    if (res_type == TASK_RESPONSE_TYPE_ANTHROPIC) {
+                    if (llama_server_response_type_is_anthropic_rust(res_type)) {
                         output = format_anthropic_sse(res_json);
-                    } else if (res_type == TASK_RESPONSE_TYPE_OAI_RESP) {
+                    } else if (llama_server_response_type_is_oai_resp_rust(res_type)) {
                         output = format_oai_resp_sse(res_json);
                     } else {
                         output = format_oai_sse(res_json);
@@ -10679,7 +10720,7 @@ std::unique_ptr<server_res_generator> server_routes::handle_embeddings_impl(cons
         return res;
     }
 
-    if (res_type != TASK_RESPONSE_TYPE_NONE && meta->pooling_type == LLAMA_POOLING_TYPE_NONE) {
+    if (llama_server_response_type_is_non_native_rust(res_type) && meta->pooling_type == LLAMA_POOLING_TYPE_NONE) {
         res->error(format_error_response("Pooling type 'none' is not OAI compatible. Please use a different pooling type", ERROR_TYPE_INVALID_REQUEST));
         return res;
     }
@@ -10763,7 +10804,7 @@ std::unique_ptr<server_res_generator> server_routes::handle_embeddings_impl(cons
     }
 
     // write JSON response
-    json root = res_type == TASK_RESPONSE_TYPE_OAI_EMBD
+    json root = llama_server_response_type_is_oai_embd_rust(res_type)
         ? format_embeddings_response_oaicompat(body, meta->model_name, responses, use_base64)
         : json(responses);
     res->ok(root);
@@ -11382,7 +11423,7 @@ struct server_tool_edit_file : server_tool {
 
         // sort descending so earlier-indexed changes don't shift later ones
         std::sort(entries.begin(), entries.end(), [](const change_entry & a, const change_entry & b) {
-            return a.line_start > b.line_start;
+            return llama_server_line_start_desc_rust(a.line_start, b.line_start);
         });
 
         // apply changes (0-based indices internally)
