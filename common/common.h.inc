@@ -69,6 +69,38 @@ void llama_common_unicode_string_free(llama_common_unicode_string value);
 const char * llama_common_jinja_token_type_to_string_rust(int type);
 bool llama_common_jinja_is_word_rust(uint8_t c);
 bool llama_common_jinja_is_integer_rust(uint8_t c);
+bool llama_common_string_starts_with_rust(
+        const uint8_t * data, size_t len,
+        const uint8_t * prefix, size_t prefix_len);
+bool llama_common_string_ends_with_rust(
+        const uint8_t * data, size_t len,
+        const uint8_t * suffix, size_t suffix_len);
+bool llama_common_bytes_equal_rust(
+        const uint8_t * left, size_t left_len,
+        const uint8_t * right, size_t right_len);
+bool llama_common_grammar_is_empty_rust(int grammar_type, size_t grammar_len);
+bool llama_common_grammar_needs_prefill_rust(int grammar_type);
+bool llama_common_has_logit_bias_rust(size_t logit_bias_len);
+bool llama_common_speculative_has_draft_rust(size_t path_len, size_t hf_repo_len);
+bool llama_common_peg_parse_result_fail_rust(int result_type);
+bool llama_common_peg_parse_result_need_more_input_rust(int result_type);
+bool llama_common_peg_parse_result_success_rust(int result_type);
+bool llama_common_peg_parse_flags_is_lenient_rust(int flags);
+bool llama_common_peg_parse_flags_is_debug_rust(int flags);
+bool llama_common_peg_char_range_contains_rust(uint32_t start, uint32_t end, uint32_t codepoint);
+bool llama_common_chat_msg_is_empty_rust(
+        size_t content_len,
+        size_t content_parts_len,
+        size_t tool_calls_len,
+        size_t reasoning_content_len,
+        size_t tool_name_len,
+        size_t tool_call_id_len);
+size_t llama_common_string_find_partial_stop_rust(
+        const uint8_t * data, size_t len,
+        const uint8_t * stop, size_t stop_len);
+size_t llama_common_string_remove_suffix_len_rust(
+        const uint8_t * data, size_t len,
+        const uint8_t * suffix, size_t suffix_len);
 llama_common_unicode_string llama_common_http_show_masked_url_rust(
         const uint8_t * scheme, size_t scheme_len,
         bool has_user,
@@ -605,7 +637,7 @@ struct common_grammar {
     }
 
     // Check if a grammar is set
-    bool empty() const { return type == COMMON_GRAMMAR_TYPE_NONE || grammar.empty(); }
+    bool empty() const { return llama_common_grammar_is_empty_rust(type, grammar.size()); }
 };
 
 // Returns the raw grammar string, or empty string if no grammar is set.
@@ -616,8 +648,7 @@ inline const std::string & common_grammar_value(const common_grammar & g) {
 // Returns true when the generation_prompt should be prefilled into the grammar sampler.
 // Only output-format and tool-call grammars need prefill; user-supplied grammars must not be prefilled.
 inline bool common_grammar_needs_prefill(const common_grammar & g) {
-    return g.type == COMMON_GRAMMAR_TYPE_OUTPUT_FORMAT
-        || g.type == COMMON_GRAMMAR_TYPE_TOOL_CALLS;
+    return llama_common_grammar_needs_prefill_rust(g.type);
 }
 
 // sampling parameters
@@ -695,7 +726,7 @@ struct common_params_sampling {
     bool backend_sampling = false;
 
     bool has_logit_bias() const {
-        return !logit_bias.empty();
+        return llama_common_has_logit_bias_rust(logit_bias.size());
     }
 
     // print the parameters into a string
@@ -777,7 +808,7 @@ struct common_params_speculative {
     common_params_speculative_ngram_cache ngram_cache;
 
     bool has_dft() const {
-        return !draft.mparams.path.empty() || !draft.mparams.hf_repo.empty();
+        return llama_common_speculative_has_draft_rust(draft.mparams.path.size(), draft.mparams.hf_repo.size());
     }
 };
 
@@ -1210,42 +1241,41 @@ inline std::vector<std::string> string_split<std::string>(const std::string & st
 
 // remove when moving to c++20
 inline bool string_starts_with(std::string_view str, std::string_view prefix) {
-    return str.size() >= prefix.size() &&
-           str.compare(0, prefix.size(), prefix) == 0;
+    return llama_common_string_starts_with_rust(
+            reinterpret_cast<const uint8_t *>(str.data()), str.size(),
+            reinterpret_cast<const uint8_t *>(prefix.data()), prefix.size());
 }
 
 // remove when moving to c++20
 inline bool string_starts_with(std::string_view str, char prefix) {
-    return !str.empty() && str.front() == prefix;
+    const uint8_t prefix_byte = static_cast<uint8_t>(prefix);
+    return llama_common_string_starts_with_rust(
+            reinterpret_cast<const uint8_t *>(str.data()), str.size(),
+            &prefix_byte, 1);
 }
 
 // remove when moving to c++20
 inline bool string_ends_with(std::string_view str, std::string_view suffix) {
-    return str.size() >= suffix.size() &&
-           str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+    return llama_common_string_ends_with_rust(
+            reinterpret_cast<const uint8_t *>(str.data()), str.size(),
+            reinterpret_cast<const uint8_t *>(suffix.data()), suffix.size());
 }
 
 inline bool string_remove_suffix(std::string & str, std::string_view suffix) {
-    if (string_ends_with(str, suffix)) {
-        str.resize(str.size() - suffix.size());
+    const size_t new_len = llama_common_string_remove_suffix_len_rust(
+            reinterpret_cast<const uint8_t *>(str.data()), str.size(),
+            reinterpret_cast<const uint8_t *>(suffix.data()), suffix.size());
+    if (new_len != std::string::npos) {
+        str.resize(new_len);
         return true;
     }
     return false;
 }
 
 inline size_t string_find_partial_stop(std::string_view str, std::string_view stop) {
-    if (!str.empty() && !stop.empty()) {
-        const size_t max_len = std::min(str.size(), stop.size());
-        const char last_char = str.back();
-        for (size_t len = max_len; len > 0; --len) {
-            if (stop[len - 1] == last_char) {
-                if (string_ends_with(str, stop.substr(0, len))) {
-                    return str.size() - len;
-                }
-            }
-        }
-    }
-    return std::string::npos;
+    return llama_common_string_find_partial_stop_rust(
+            reinterpret_cast<const uint8_t *>(str.data()), str.size(),
+            reinterpret_cast<const uint8_t *>(stop.data()), stop.size());
 }
 
 bool string_parse_kv_override(const char * data, std::vector<llama_model_kv_override> & overrides);
@@ -3720,9 +3750,9 @@ struct common_peg_parse_result {
     common_peg_parse_result(common_peg_parse_result_type type, size_t start, size_t end, std::vector<common_peg_ast_id> nodes)
         : type(type), start(start), end(end), nodes(std::move(nodes)) {}
 
-    bool fail() const { return type == COMMON_PEG_PARSE_RESULT_FAIL; }
-    bool need_more_input() const { return type == COMMON_PEG_PARSE_RESULT_NEED_MORE_INPUT; }
-    bool success() const { return type == COMMON_PEG_PARSE_RESULT_SUCCESS; }
+    bool fail() const { return llama_common_peg_parse_result_fail_rust(type); }
+    bool need_more_input() const { return llama_common_peg_parse_result_need_more_input_rust(type); }
+    bool success() const { return llama_common_peg_parse_result_success_rust(type); }
 };
 
 enum common_peg_parse_flags {
@@ -3760,8 +3790,8 @@ struct common_peg_parse_context {
     common_peg_parse_context(const std::string & input, common_peg_parse_flags flags = COMMON_PEG_PARSE_FLAG_NONE)
         : input(input), flags(flags), parse_depth(0) {}
 
-    bool is_lenient() const { return flags & COMMON_PEG_PARSE_FLAG_LENIENT; }
-    bool is_debug() const { return flags & COMMON_PEG_PARSE_FLAG_DEBUG; }
+    bool is_lenient() const { return llama_common_peg_parse_flags_is_lenient_rust(flags); }
+    bool is_debug() const { return llama_common_peg_parse_flags_is_debug_rust(flags); }
 };
 
 class common_peg_arena;
@@ -3807,7 +3837,7 @@ struct common_peg_chars_parser {
     struct char_range {
         uint32_t start;
         uint32_t end;
-        bool contains(uint32_t codepoint) const { return codepoint >= start && codepoint <= end; }
+        bool contains(uint32_t codepoint) const { return llama_common_peg_char_range_contains_rust(start, end, codepoint); }
     };
 
     std::string pattern;
@@ -4149,7 +4179,9 @@ struct common_chat_tool_call {
     std::string id;
 
     bool operator==(const common_chat_tool_call & other) const {
-        return name == other.name && arguments == other.arguments && id == other.id;
+        return llama_common_bytes_equal_rust(reinterpret_cast<const uint8_t *>(name.data()), name.size(), reinterpret_cast<const uint8_t *>(other.name.data()), other.name.size()) &&
+               llama_common_bytes_equal_rust(reinterpret_cast<const uint8_t *>(arguments.data()), arguments.size(), reinterpret_cast<const uint8_t *>(other.arguments.data()), other.arguments.size()) &&
+               llama_common_bytes_equal_rust(reinterpret_cast<const uint8_t *>(id.data()), id.size(), reinterpret_cast<const uint8_t *>(other.id.data()), other.id.size());
     }
 };
 
@@ -4163,7 +4195,8 @@ struct common_chat_msg_content_part {
     // std::string reasoning_content;
 
     bool operator==(const common_chat_msg_content_part & other) const {
-        return type == other.type && text == other.text;
+        return llama_common_bytes_equal_rust(reinterpret_cast<const uint8_t *>(type.data()), type.size(), reinterpret_cast<const uint8_t *>(other.type.data()), other.type.size()) &&
+               llama_common_bytes_equal_rust(reinterpret_cast<const uint8_t *>(text.data()), text.size(), reinterpret_cast<const uint8_t *>(other.text.data()), other.text.size());
     }
 };
 
@@ -4208,8 +4241,13 @@ struct common_chat_msg {
     nlohmann::ordered_json to_json_oaicompat(bool concat_typed_text = false) const;
 
     bool empty() const {
-        return content.empty() && content_parts.empty() && tool_calls.empty() && reasoning_content.empty() &&
-               tool_name.empty() && tool_call_id.empty();
+        return llama_common_chat_msg_is_empty_rust(
+                content.size(),
+                content_parts.size(),
+                tool_calls.size(),
+                reasoning_content.size(),
+                tool_name.size(),
+                tool_call_id.size());
     }
 
     void set_tool_call_ids(std::vector<std::string> &           ids_cache,
@@ -4991,7 +5029,8 @@ struct segment {
     segment(segment_type type, std::string value) : type(type), value(std::move(value)) {}
 
     bool operator==(const segment & other) const {
-        return type == other.type && value == other.value;
+        return type == other.type &&
+               llama_common_bytes_equal_rust(reinterpret_cast<const uint8_t *>(value.data()), value.size(), reinterpret_cast<const uint8_t *>(other.value.data()), other.value.size());
     }
 
     bool operator!=(const segment & other) const {

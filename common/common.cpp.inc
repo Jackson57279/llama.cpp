@@ -106,6 +106,11 @@ int llama_common_arg_is_truthy_rust(const char * value);
 int llama_common_arg_is_falsey_rust(const char * value);
 int llama_common_arg_is_autoy_rust(const char * value);
 int llama_common_parse_bool_value_rust(const char * value);
+llama_common_unicode_string llama_common_parse_bool_arg_rust(
+        const common_rust_string_view * neg_args, size_t neg_args_len,
+        const uint8_t * key, size_t key_len,
+        const uint8_t * value, size_t value_len);
+llama_common_unicode_string llama_common_read_file_rust(const uint8_t * path, size_t path_len);
 int llama_common_parse_cpu_mask_rust(const uint8_t * mask, size_t mask_len, bool * boolmask, size_t boolmask_len);
 int llama_common_chat_tool_choice_parse_oaicompat_rust(const char * value);
 int llama_common_kv_cache_type_from_str_rust(const char * value);
@@ -114,13 +119,60 @@ void llama_common_embd_normalize_rust(const float * inp, float * out, int n, int
 float llama_common_embd_similarity_cos_rust(const float * embd1, const float * embd2, int n);
 const char * llama_common_get_all_kv_cache_types_rust();
 const char * llama_common_bool_to_string_rust(bool value);
+int llama_common_default_thread_count_windows_rust(int num_physical_cores, int default_threads);
+int llama_common_default_thread_count_rust(unsigned int n_threads);
 void llama_common_lr_opt_init_rust(
         float lr0, float lr_min, float decay_epochs, unsigned epochs,
         float * out_decay_epochs, float * out_scale_epoch);
 float llama_common_lr_opt_get_lr_rust(float lr0, float lr_min, float decay_epochs, float scale_epoch, float epoch);
 int llama_common_log_level_to_verbosity_rust(int level);
 int64_t llama_common_time_us_rust();
+bool llama_common_sampler_prob_desc_rust(float left, float right);
+bool llama_common_marker_is_opener_rust(uint8_t c);
+bool llama_common_marker_is_closer_rust(uint8_t opener, uint8_t c);
+bool llama_common_content_is_always_wrapped_rust(int mode, size_t start_len, size_t end_len);
+bool llama_common_cpu_has_hybrid_bit_rust(uint32_t edx);
+bool llama_common_cpu_is_intel_atom_core_type_rust(uint32_t eax);
+bool llama_common_any_terminal_rust(bool stdout_is_tty, bool stderr_is_tty);
+bool llama_common_arg_has_env_value_rust(bool has_env, bool has_neg_env_value, bool has_env_value);
+bool llama_common_jinja_int_is_odd_rust(int64_t value);
+bool llama_common_jinja_int_is_even_rust(int64_t value);
+int64_t llama_common_jinja_int_abs_rust(int64_t value);
+double llama_common_jinja_float_abs_rust(double value);
+bool llama_common_jinja_is_false_rust(bool is_bool, bool value);
+bool llama_common_jinja_is_true_rust(bool is_bool, bool value);
+bool llama_common_jinja_is_defined_rust(bool is_undefined);
+bool llama_common_jinja_compare_f64_rust(double left, double right, int op);
+bool llama_common_jinja_compare_bool_rust(bool left, bool right, int op);
+bool llama_common_jinja_bool_not_rust(bool value);
+bool llama_common_jinja_membership_result_rust(bool member, bool is_not_in);
+bool llama_common_jinja_compare_bytes_rust(
+        const uint8_t * left, size_t left_len,
+        const uint8_t * right, size_t right_len,
+        int op);
+bool llama_common_ring_buffer_is_empty_rust(size_t size);
 bool llama_common_is_http_status_ok_rust(int status);
+llama_common_unicode_string llama_common_model_endpoint_rust(
+        const uint8_t * model_endpoint, size_t model_endpoint_len,
+        const uint8_t * hf_endpoint, size_t hf_endpoint_len);
+llama_common_unicode_string llama_common_read_etag_rust(const uint8_t * data, size_t len);
+llama_common_unicode_string llama_common_get_cached_ref_rust(const uint8_t * data, size_t len);
+bool llama_common_safe_write_file_rust(
+        const uint8_t * path, size_t path_len,
+        const uint8_t * data, size_t data_len);
+bool llama_common_fs_is_directory_rust(const uint8_t * path, size_t path_len);
+bool llama_common_is_lfm2_template_rust(const uint8_t * data, size_t len);
+int llama_common_specialized_chat_template_rust(const uint8_t * data, size_t len);
+bool llama_common_is_gemma4_modern_template_rust(const uint8_t * data, size_t len);
+bool llama_common_needs_gpt_oss_channel_template_patch_rust(const uint8_t * data, size_t len);
+bool llama_common_needs_mistral_tool_calls_template_patch_rust(const uint8_t * data, size_t len);
+bool llama_common_grammar_should_apply_rust(
+        bool has_grammar,
+        bool has_reasoning_budget,
+        bool grammar_lazy,
+        int reasoning_state,
+        int idle_state,
+        int done_state);
 bool llama_common_gguf_filename_is_model_rust(const uint8_t * data, size_t len);
 bool llama_common_is_hex_digit_rust(uint8_t c);
 size_t llama_common_parse_hex_escape_rust(
@@ -273,10 +325,10 @@ int32_t common_cpu_get_num_physical_cores() {
         info = reinterpret_cast<PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX>(reinterpret_cast<char*>(info) + info->Size);
     }
 
-    return num_physical_cores > 0 ? num_physical_cores : default_threads;
+    return llama_common_default_thread_count_windows_rust(num_physical_cores, default_threads);
 #endif
     unsigned int n_threads = std::thread::hardware_concurrency();
-    return n_threads > 0 ? (n_threads <= 4 ? n_threads : n_threads / 2) : 4;
+    return llama_common_default_thread_count_rust(n_threads);
 }
 
 #if defined(__x86_64__) && defined(__linux__) && !defined(__ANDROID__)
@@ -301,15 +353,13 @@ static int pin_cpu(int cpu) {
 static bool is_hybrid_cpu(void) {
     unsigned eax, ebx, ecx, edx;
     cpuid(7, 0, &eax, &ebx, &ecx, &edx);
-    return !!(edx & (1u << 15));
+    return llama_common_cpu_has_hybrid_bit_rust(edx);
 }
 
 static bool is_running_on_efficiency_core(void) {
     unsigned eax, ebx, ecx, edx;
     cpuid(0x1a, 0, &eax, &ebx, &ecx, &edx);
-    int intel_atom = 0x20;
-    int core_type = (eax & 0xff000000u) >> 24;
-    return core_type == intel_atom;
+    return llama_common_cpu_is_intel_atom_core_type_rust(eax);
 }
 
 static int cpu_count_math_cpus(int n_cpu) {
@@ -863,8 +913,7 @@ bool fs_create_directory_with_parents(const std::string & path) {
 }
 
 bool fs_is_directory(const std::string & path) {
-    std::filesystem::path dir(path);
-    return std::filesystem::exists(dir) && std::filesystem::is_directory(dir);
+    return llama_common_fs_is_directory_rust((const uint8_t *) path.data(), path.size());
 }
 
 std::string fs_get_cache_directory() {
@@ -988,7 +1037,7 @@ bool tty_can_use_colors() {
     bool stdout_is_tty = isatty(fileno(stdout));
     bool stderr_is_tty = isatty(fileno(stderr));
 
-    return stdout_is_tty || stderr_is_tty;
+    return llama_common_any_terminal_rust(stdout_is_tty, stderr_is_tty);
 }
 
 //
@@ -1317,15 +1366,11 @@ std::string common_get_model_endpoint() {
     const char * model_endpoint_env = getenv("MODEL_ENDPOINT");
     // We still respect the use of environment-variable "HF_ENDPOINT" for backward-compatibility.
     const char * hf_endpoint_env = getenv("HF_ENDPOINT");
-    const char * endpoint_env = model_endpoint_env ? model_endpoint_env : hf_endpoint_env;
-    std::string model_endpoint = "https://huggingface.co/";
-    if (endpoint_env) {
-        model_endpoint = endpoint_env;
-        if (model_endpoint.back() != '/') {
-            model_endpoint += '/';
-        }
-    }
-    return model_endpoint;
+    return common_rust_string_to_std(llama_common_model_endpoint_rust(
+            model_endpoint_env ? (const uint8_t *) model_endpoint_env : nullptr,
+            model_endpoint_env ? strlen(model_endpoint_env) : 0,
+            hf_endpoint_env ? (const uint8_t *) hf_endpoint_env : nullptr,
+            hf_endpoint_env ? strlen(hf_endpoint_env) : 0));
 }
 
 common_context_seq_rm_type common_context_can_seq_rm(llama_context * ctx) {
@@ -1871,13 +1916,14 @@ static std::initializer_list<enum llama_example> mmproj_examples = {
 };
 
 static std::string read_file(const std::string & fname) {
-    std::ifstream file(fname);
-    if (!file) {
+    llama_common_unicode_string content =
+            llama_common_read_file_rust((const uint8_t *) fname.data(), fname.size());
+    if (!content.data) {
         throw std::runtime_error(string_format("error: failed to open file '%s'\n", fname.c_str()));
     }
-    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    file.close();
-    return content;
+    std::string result((const char *) content.data, content.len);
+    llama_common_unicode_string_free(content);
+    return result;
 }
 
 static const std::vector<common_arg> & get_common_arg_defs() {
@@ -1949,15 +1995,17 @@ bool common_arg::get_value_from_env(std::string & output) const {
 }
 
 bool common_arg::has_value_from_env() const {
+    bool has_neg_env_value = false;
     if (env != nullptr && !args_neg.empty()) {
         // for compatibility, we need to check LLAMA_ARG_NO_ env as well
         std::string neg_env = env;
         string_replace_all(neg_env, "LLAMA_ARG_", "LLAMA_ARG_NO_");
-        if (std::getenv(neg_env.c_str())) {
-            return true;
-        }
+        has_neg_env_value = std::getenv(neg_env.c_str()) != nullptr;
     }
-    return env != nullptr && std::getenv(env);
+    return llama_common_arg_has_env_value_rust(
+            env != nullptr,
+            has_neg_env_value,
+            env != nullptr && std::getenv(env) != nullptr);
 }
 
 static std::vector<std::string> break_str_into_lines(std::string input, size_t max_char_per_line) {
@@ -6519,8 +6567,8 @@ std::vector<segment> segmentize_markers(const std::string & text) {
     bool in_marker = false;
     char marker_opener = '\0';
 
-    auto is_marker_opener = [](char c) -> bool { return c == '<' || c == '['; };
-    auto is_marker_closer = [](char op, char c) -> bool { return (op == '<' && c == '>') || (op == '[' && c == ']'); };
+    auto is_marker_opener = [](char c) -> bool { return llama_common_marker_is_opener_rust((uint8_t) c); };
+    auto is_marker_closer = [](char op, char c) -> bool { return llama_common_marker_is_closer_rust((uint8_t) op, (uint8_t) c); };
 
     size_t last_border = 0;
 
@@ -7156,7 +7204,7 @@ analyze_content::analyze_content(const common_chat_template & tmpl, const analyz
 }
 
 bool analyze_content::is_always_wrapped() const {
-    return mode == content_mode::ALWAYS_WRAPPED && !start.empty() && !end.empty();
+    return llama_common_content_is_always_wrapped_rust((int) mode, start.size(), end.size());
 }
 
 analyze_tools::analyze_tools(const common_chat_template & tmpl,
@@ -9588,7 +9636,7 @@ value binary_expression::execute_impl(context & ctx) {
     if (op.value == "==") {
         return mk_val<value_bool>(*left_val == *right_val);
     } else if (op.value == "!=") {
-        return mk_val<value_bool>(!(*left_val == *right_val));
+        return mk_val<value_bool>(llama_common_jinja_bool_not_rust(*left_val == *right_val));
     }
 
     auto workaround_concat_null_with_str = [&](value & res) -> bool {
@@ -9618,7 +9666,7 @@ value binary_expression::execute_impl(context & ctx) {
     if (is_val<value_undefined>(left_val) || is_val<value_undefined>(right_val)) {
         if (is_val<value_undefined>(right_val) && (op.value == "in" || op.value == "not in")) {
             // Special case: `anything in undefined` is `false` and `anything not in undefined` is `true`
-            return mk_val<value_bool>(op.value == "not in");
+            return mk_val<value_bool>(llama_common_jinja_membership_result_rust(false, op.value == "not in"));
         }
         if (op.value == "+" || op.value == "~") {
             value res = mk_val<value_undefined>();
@@ -9665,16 +9713,16 @@ value binary_expression::execute_impl(context & ctx) {
             }
         } else if (op.value == "<") {
             JJ_DEBUG("Comparison operation: %f < %f is %d", a, b, a < b);
-            return mk_val<value_bool>(a < b);
+            return mk_val<value_bool>(llama_common_jinja_compare_f64_rust(a, b, value_compare_op::lt));
         } else if (op.value == ">") {
             JJ_DEBUG("Comparison operation: %f > %f is %d", a, b, a > b);
-            return mk_val<value_bool>(a > b);
+            return mk_val<value_bool>(llama_common_jinja_compare_f64_rust(a, b, value_compare_op::gt));
         } else if (op.value == ">=") {
             JJ_DEBUG("Comparison operation: %f >= %f is %d", a, b, a >= b);
-            return mk_val<value_bool>(a >= b);
+            return mk_val<value_bool>(llama_common_jinja_compare_f64_rust(a, b, value_compare_op::ge));
         } else if (op.value == "<=") {
             JJ_DEBUG("Comparison operation: %f <= %f is %d", a, b, a <= b);
-            return mk_val<value_bool>(a <= b);
+            return mk_val<value_bool>(llama_common_jinja_compare_f64_rust(a, b, 5));
         }
     }
 
@@ -9696,9 +9744,9 @@ value binary_expression::execute_impl(context & ctx) {
         // case: 1 in [0, 1, 2]
         bool member = test_is_in();
         if (op.value == "in") {
-            return mk_val<value_bool>(member);
+            return mk_val<value_bool>(llama_common_jinja_membership_result_rust(member, false));
         } else if (op.value == "not in") {
-            return mk_val<value_bool>(!member);
+            return mk_val<value_bool>(llama_common_jinja_membership_result_rust(member, true));
         }
     }
 
@@ -9734,9 +9782,9 @@ value binary_expression::execute_impl(context & ctx) {
         // case: "a" in "abc"
         bool member = test_is_in();
         if (op.value == "in") {
-            return mk_val<value_bool>(member);
+            return mk_val<value_bool>(llama_common_jinja_membership_result_rust(member, false));
         } else if (op.value == "not in") {
-            return mk_val<value_bool>(!member);
+            return mk_val<value_bool>(llama_common_jinja_membership_result_rust(member, true));
         }
     }
 
@@ -9745,9 +9793,9 @@ value binary_expression::execute_impl(context & ctx) {
         // case: key in {key: value}
         bool member = test_is_in();
         if (op.value == "in") {
-            return mk_val<value_bool>(member);
+            return mk_val<value_bool>(llama_common_jinja_membership_result_rust(member, false));
         } else if (op.value == "not in") {
-            return mk_val<value_bool>(!member);
+            return mk_val<value_bool>(llama_common_jinja_membership_result_rust(member, true));
         }
     }
 
@@ -9874,7 +9922,7 @@ value test_expression::execute_impl(context & ctx) {
     auto res = it->second(args);
 
     if (negate) {
-        return mk_val<value_bool>(!res->as_bool());
+        return mk_val<value_bool>(llama_common_jinja_bool_not_rust(res->as_bool()));
     } else {
         return res;
     }
@@ -9885,7 +9933,7 @@ value unary_expression::execute_impl(context & ctx) {
     JJ_DEBUG("Executing unary expression with operator '%s'", op.value.c_str());
 
     if (op.value == "not") {
-        return mk_val<value_bool>(!operand_val->as_bool());
+        return mk_val<value_bool>(llama_common_jinja_bool_not_rust(operand_val->as_bool()));
     } else if (op.value == "-") {
         if (is_val<value_int>(operand_val)) {
             return mk_val<value_int>(-operand_val->as_int());
@@ -10722,21 +10770,23 @@ const func_builtins & global_builtins() {
         {"test_is_odd", [](const func_args & args) -> value {
             args.ensure_vals<value_int>();
             int64_t val = args.get_pos(0)->as_int();
-            return mk_val<value_bool>(val % 2 != 0);
+            return mk_val<value_bool>(llama_common_jinja_int_is_odd_rust(val));
         }},
         {"test_is_even", [](const func_args & args) -> value {
             args.ensure_vals<value_int>();
             int64_t val = args.get_pos(0)->as_int();
-            return mk_val<value_bool>(val % 2 == 0);
+            return mk_val<value_bool>(llama_common_jinja_int_is_even_rust(val));
         }},
         {"test_is_false", [](const func_args & args) -> value {
             args.ensure_count(1);
-            bool val = is_val<value_bool>(args.get_pos(0)) && !args.get_pos(0)->as_bool();
+            bool is_bool = is_val<value_bool>(args.get_pos(0));
+            bool val = llama_common_jinja_is_false_rust(is_bool, is_bool ? args.get_pos(0)->as_bool() : false);
             return mk_val<value_bool>(val);
         }},
         {"test_is_true", [](const func_args & args) -> value {
             args.ensure_count(1);
-            bool val = is_val<value_bool>(args.get_pos(0)) && args.get_pos(0)->as_bool();
+            bool is_bool = is_val<value_bool>(args.get_pos(0));
+            bool val = llama_common_jinja_is_true_rust(is_bool, is_bool ? args.get_pos(0)->as_bool() : false);
             return mk_val<value_bool>(val);
         }},
         {"test_is_divisibleby", [](const func_args & args) -> value {
@@ -10762,7 +10812,7 @@ const func_builtins & global_builtins() {
         {"test_is_none", test_type_fn<value_none>},
         {"test_is_defined", [](const func_args & args) -> value {
             args.ensure_count(1);
-            bool res = !args.get_pos(0)->is_undefined();
+            bool res = llama_common_jinja_is_defined_rust(args.get_pos(0)->is_undefined());
             JJ_DEBUG("test_is_defined: result=%d", res ? 1 : 0);
             return mk_val<value_bool>(res);
         }},
@@ -10834,7 +10884,7 @@ const func_builtins & value_int_t::get_builtins() const {
         {"abs", [](const func_args & args) -> value {
             args.ensure_vals<value_int>();
             int64_t val = args.get_pos(0)->as_int();
-            return mk_val<value_int>(val < 0 ? -val : val);
+            return mk_val<value_int>(llama_common_jinja_int_abs_rust(val));
         }},
         {"int", [](const func_args & args) -> value {
             args.ensure_vals<value_int>();
@@ -10859,7 +10909,7 @@ const func_builtins & value_float_t::get_builtins() const {
         {"abs", [](const func_args & args) -> value {
             args.ensure_vals<value_float>();
             double val = args.get_pos(0)->as_float();
-            return mk_val<value_float>(val < 0.0 ? -val : val);
+            return mk_val<value_float>(llama_common_jinja_float_abs_rust(val));
         }},
         {"int", [](const func_args & args) -> value {
             args.ensure_vals<value_float>();
@@ -11584,15 +11634,15 @@ bool value_compare(const value & a, const value & b, value_compare_op op) {
             (is_val<value_int>(b) || is_val<value_float>(b))){
             try {
                 if (op == value_compare_op::eq) {
-                    return a->as_float() == b->as_float();
+                    return llama_common_jinja_compare_f64_rust(a->as_float(), b->as_float(), op);
                 } else if (op == value_compare_op::ge) {
-                    return a->as_float() >= b->as_float();
+                    return llama_common_jinja_compare_f64_rust(a->as_float(), b->as_float(), op);
                 } else if (op == value_compare_op::gt) {
-                    return a->as_float() > b->as_float();
+                    return llama_common_jinja_compare_f64_rust(a->as_float(), b->as_float(), op);
                 } else if (op == value_compare_op::lt) {
-                    return a->as_float() < b->as_float();
+                    return llama_common_jinja_compare_f64_rust(a->as_float(), b->as_float(), op);
                 } else if (op == value_compare_op::ne) {
-                    return a->as_float() != b->as_float();
+                    return llama_common_jinja_compare_f64_rust(a->as_float(), b->as_float(), op);
                 } else {
                     throw std::runtime_error("Unsupported comparison operator for numeric types");
                 }
@@ -11604,16 +11654,18 @@ bool value_compare(const value & a, const value & b, value_compare_op op) {
             (is_val<value_string>(a) && (is_val<value_int>(b) || is_val<value_float>(b))) ||
             (is_val<value_string>(a) && is_val<value_string>(b))) {
             try {
+                const std::string lhs = a->as_string().str();
+                const std::string rhs = b->as_string().str();
                 if (op == value_compare_op::eq) {
-                    return a->as_string().str() == b->as_string().str();
+                    return llama_common_jinja_compare_bytes_rust((const uint8_t *) lhs.data(), lhs.size(), (const uint8_t *) rhs.data(), rhs.size(), op);
                 } else if (op == value_compare_op::ge) {
-                    return a->as_string().str() >= b->as_string().str();
+                    return llama_common_jinja_compare_bytes_rust((const uint8_t *) lhs.data(), lhs.size(), (const uint8_t *) rhs.data(), rhs.size(), op);
                 } else if (op == value_compare_op::gt) {
-                    return a->as_string().str() > b->as_string().str();
+                    return llama_common_jinja_compare_bytes_rust((const uint8_t *) lhs.data(), lhs.size(), (const uint8_t *) rhs.data(), rhs.size(), op);
                 } else if (op == value_compare_op::lt) {
-                    return a->as_string().str() < b->as_string().str();
+                    return llama_common_jinja_compare_bytes_rust((const uint8_t *) lhs.data(), lhs.size(), (const uint8_t *) rhs.data(), rhs.size(), op);
                 } else if (op == value_compare_op::ne) {
-                    return a->as_string().str() != b->as_string().str();
+                    return llama_common_jinja_compare_bytes_rust((const uint8_t *) lhs.data(), lhs.size(), (const uint8_t *) rhs.data(), rhs.size(), op);
                 } else {
                     throw std::runtime_error("Unsupported comparison operator for string/number types");
                 }
@@ -11622,9 +11674,9 @@ bool value_compare(const value & a, const value & b, value_compare_op op) {
         // compare boolean simple
         if (is_val<value_bool>(a) && is_val<value_bool>(b)) {
             if (op == value_compare_op::eq) {
-                return a->as_bool() == b->as_bool();
+                return llama_common_jinja_compare_bool_rust(a->as_bool(), b->as_bool(), op);
             } else if (op == value_compare_op::ne) {
-                return a->as_bool() != b->as_bool();
+                return llama_common_jinja_compare_bool_rust(a->as_bool(), b->as_bool(), op);
             } else {
                 throw std::runtime_error("Unsupported comparison operator for bool type");
             }
@@ -12968,16 +13020,15 @@ static std::map<std::string, common_arg> get_map_key_opt(common_params_context &
 }
 
 static std::string parse_bool_arg(const common_arg & arg, const std::string & key, const std::string & value) {
-    // if this is a negated arg, we need to reverse the value
+    std::vector<common_rust_string_view> neg_args;
+    neg_args.reserve(arg.args_neg.size());
     for (const auto & neg_arg : arg.args_neg) {
-        const size_t neg_arg_len = std::strlen(neg_arg);
-        if (common_rust_string_to_std(
-                llama_common_rm_leading_dashes_rust((const uint8_t *) neg_arg, neg_arg_len)) == key) {
-            return common_arg_utils::is_truthy(value) ? "false" : "true";
-        }
+        neg_args.push_back({ (const uint8_t *) neg_arg, std::strlen(neg_arg) });
     }
-    // otherwise, not negated
-    return value;
+    return common_rust_string_to_std(llama_common_parse_bool_arg_rust(
+            neg_args.data(), neg_args.size(),
+            (const uint8_t *) key.data(), key.size(),
+            (const uint8_t *) value.data(), value.size()));
 }
 
 common_preset_context::common_preset_context(llama_example ex, bool only_remote_allowed)
@@ -14251,7 +14302,7 @@ struct ring_buffer {
     }
 
     bool empty() const {
-        return sz == 0;
+        return llama_common_ring_buffer_is_empty_rust(sz);
     }
 
     size_t size() const {
@@ -14581,18 +14632,16 @@ void common_sampler_free(struct common_sampler * gsmpl) {
 }
 
 static bool grammar_should_apply(struct common_sampler * gsmpl) {
-    if (!gsmpl->grmr) {
-        return false;
-    }
-    if (!gsmpl->rbudget) {
-        return true;
-    }
-    if (gsmpl->params.grammar_lazy) {
-        // if grammar is lazy, only apply when reasoning budget is not active
-        const auto state = common_reasoning_budget_get_state(gsmpl->rbudget);
-        return state == REASONING_BUDGET_IDLE || state == REASONING_BUDGET_DONE;
-    }
-    return true;
+    // if grammar is lazy, only apply when reasoning budget is not active
+    const auto state = (gsmpl->rbudget && gsmpl->params.grammar_lazy) ?
+            common_reasoning_budget_get_state(gsmpl->rbudget) : REASONING_BUDGET_IDLE;
+    return llama_common_grammar_should_apply_rust(
+            gsmpl->grmr != nullptr,
+            gsmpl->rbudget != nullptr,
+            gsmpl->params.grammar_lazy,
+            state,
+            REASONING_BUDGET_IDLE,
+            REASONING_BUDGET_DONE);
 }
 
 void common_sampler_accept(struct common_sampler * gsmpl, llama_token token, bool is_generated) {
@@ -14828,7 +14877,7 @@ llama_token_data_array * common_sampler_get_candidates(struct common_sampler * g
         const llama_token id = res->data[res->selected].id;
 
         std::sort(res->data, res->data + res->size, [](const llama_token_data & a, const llama_token_data & b) {
-            return a.p > b.p;
+            return llama_common_sampler_prob_desc_rust(a.p, b.p);
         });
 
         // restore the selected token after sorting
@@ -14953,8 +15002,7 @@ bool common_chat_templates_was_explicit(const struct common_chat_templates * tmp
 // LFM2 format detection: template uses <|tool_list_start|>[...]<|tool_list_end|> around the tool list
 // and <|tool_call_start|>[...]<|tool_call_end|> around each tool call
 static bool is_lfm2_template(const std::string & src) {
-    return src.find("<|tool_list_start|>") != std::string::npos &&
-           src.find("<|tool_list_end|>")   != std::string::npos;
+    return llama_common_is_lfm2_template_rust((const uint8_t *) src.data(), src.size());
 }
 
 common_chat_prompt_preset common_chat_get_asr_prompt(const common_chat_templates * chat_templates) {
@@ -15016,9 +15064,8 @@ common_chat_templates_ptr common_chat_templates_init(const struct llama_model * 
 
     // TODO @ngxson : this is a temporary hack to prevent chat template from throwing an error
     // Ref: https://github.com/ggml-org/llama.cpp/pull/15230#issuecomment-3173959633
-    if (default_template_src.find("<|channel|>") != std::string::npos
-        // search for the error message and patch it
-        && default_template_src.find("in message.content or") != std::string::npos) {
+    if (llama_common_needs_gpt_oss_channel_template_patch_rust(
+            (const uint8_t *) default_template_src.data(), default_template_src.size())) {
         string_replace_all(default_template_src,
                            "{%- if \"<|channel|>analysis<|message|>\" in message.content or "
                            "\"<|channel|>final<|message|>\" in message.content %}",
@@ -15027,9 +15074,8 @@ common_chat_templates_ptr common_chat_templates_init(const struct llama_model * 
 
     // TODO @aldehir : this is a temporary fix, pending Minja changes
     // Ref: https://github.com/ggml-org/llama.cpp/pull/17713#issuecomment-3631342664
-    if (default_template_src.find("[TOOL_CALLS]") != std::string::npos
-        // search for the error message and patch it
-        && default_template_src.find("if (message['content'] is none or") != std::string::npos) {
+    if (llama_common_needs_mistral_tool_calls_template_patch_rust(
+            (const uint8_t *) default_template_src.data(), default_template_src.size())) {
         string_replace_all(default_template_src,
                            "{%- if (message['content'] is none or message['content'] == '' or "
                            "message['content']|length == 0) and (message['tool_calls'] is not defined or "
@@ -16428,73 +16474,41 @@ std::optional<common_chat_params> common_chat_try_specialized_template(
         const common_chat_template &          tmpl,
         const std::string &                   src,
         autoparser::generation_params & params) {
-    // Ministral/Mistral Large 3 - uses special reasoning structure fixes, can't use autoparser
-    // Note: Mistral Small 3.2 uses [CALL_ID] which Ministral doesn't have, so we can distinguish them
-    if (src.find("[SYSTEM_PROMPT]") != std::string::npos && src.find("[TOOL_CALLS]") != std::string::npos &&
-        src.find("[ARGS]") != std::string::npos && src.find("[CALL_ID]") == std::string::npos) {
+    switch (llama_common_specialized_chat_template_rust((const uint8_t *) src.data(), src.size())) {
+    case 1:
         LOG_DBG("Using specialized template: Ministral/Magistral Large 3\n");
         return common_chat_params_init_ministral_3(tmpl, params);
-    }
-
-    // GPT-OSS - has unique channel-based structure that needs dedicated handler
-    if (src.find("<|channel|>") != std::string::npos) {
+    case 2:
         LOG_DBG("Using specialized template: GPT-OSS\n");
         return common_chat_params_init_gpt_oss(tmpl, params);
-    }
-
-    // Functionary v3.2 - uses recipient-based format with >>>recipient\n{content}
-    // Detection: template has ">>>all" for content and ">>>" prefix for tool calls
-    if (src.find(">>>all") != std::string::npos && src.find(">>>${recipient}") != std::string::npos) {
+    case 3:
         LOG_DBG("Using specialized template: Functionary v3.2\n");
         return common_chat_params_init_functionary_v3_2(tmpl, params);
-    }
-
-    // Kimi K2 Thinking - uses unique tool call ID format: functions.<name>:<index>
-    // Detection: template has "<|tool_calls_section_begin|>" and "functions." prefix in tool call IDs
-    if (src.find("<|tool_calls_section_begin|>") != std::string::npos &&
-        src.find("<|tool_call_begin|>") != std::string::npos) {
+    case 4:
         LOG_DBG("Using specialized template: Kimi K2 Thinking\n");
         return common_chat_params_init_kimi_k2(tmpl, params);
-    }
-
-    if (is_lfm2_template(src)) {
+    case 5:
         LOG_DBG("Using specialized template: LFM2\n");
         return common_chat_params_init_lfm2(tmpl, params);
-    }
-
-    // LFM2.5 format detection: template uses plain "List of tools: [...]" with no special tokens
-    if (src.find("List of tools: [") != std::string::npos &&
-        src.find("<|tool_list_start|>") == std::string::npos) {
+    case 6:
         LOG_DBG("Using specialized template: LFM2.5\n");
         return common_chat_params_init_lfm2_5(tmpl, params);
-    }
-
-    // GigaChatV3 format detection
-    if (src.find("<|role_sep|>") != std::string::npos &&
-        src.find("<|message_sep|>") != std::string::npos &&
-        src.find("<|function_call|>") == std::string::npos) {
+    case 7:
         LOG_DBG("Using specialized template: GigaChatV3\n");
         return common_chat_params_init_gigachat_v3(tmpl, params);
-    }
-
-    // DeepSeek V3.2 format detection: template defines dsml_token and uses it for tool calls.
-    // The template source contains the token as a variable assignment, not as a literal in markup.
-    if (src.find("dsml_token") != std::string::npos &&
-        src.find("function_calls") != std::string::npos &&
-        src.find("DSML") != std::string::npos) {
+    case 8:
         LOG_DBG("Using specialized template: DeepSeek V3.2\n");
         return common_chat_params_init_deepseek_v3_2(tmpl, params);
-    }
-
-    // Gemma4 format detection
-    if (src.find("'<|tool_call>call:'") != std::string::npos) {
-        if (src.find("{#- OpenAI Chat Completions:") == std::string::npos) {
+    case 9:
+        if (!llama_common_is_gemma4_modern_template_rust((const uint8_t *) src.data(), src.size())) {
             // apply workarounds if using the older gemma4 templates
             LOG_WRN("%s: detected an outdated gemma4 chat template, applying compatibility workarounds. "
                     "Consider updating to the official template.\n", __func__);
             workaround::convert_tool_responses_gemma4(params.messages);
         }
         return common_chat_params_init_gemma4(tmpl, params);
+    default:
+        break;
     }
 
     return std::nullopt;
@@ -16852,18 +16866,8 @@ static void write_etag(const std::string & path, const std::string & etag) {
 }
 
 static std::string read_etag(const std::string & path) {
-    const std::string etag_path = path + ".etag";
-    if (!std::filesystem::exists(etag_path)) {
-        return {};
-    }
-    std::ifstream etag_in(etag_path);
-    if (!etag_in) {
-        LOG_ERR("%s: could not open .etag file for reading: %s\n", __func__, etag_path.c_str());
-        return {};
-    }
-    std::string etag;
-    std::getline(etag_in, etag);
-    return etag;
+    return common_rust_string_to_std(
+            llama_common_read_etag_rust((const uint8_t *) path.data(), path.size()));
 }
 
 static bool is_http_status_ok(int status) {
@@ -21843,23 +21847,10 @@ static bool is_valid_subpath(const fs::path & path, const fs::path & subpath) {
 }
 
 static void safe_write_file(const fs::path & path, const std::string & data) {
-    fs::path path_tmp = path.string() + ".tmp";
-
-    if (path.has_parent_path()) {
-        fs::create_directories(path.parent_path());
-    }
-
-    std::ofstream file(path_tmp);
-    file << data;
-    file.close();
-
-    std::error_code ec;
-
-    if (!file.fail()) {
-        fs::rename(path_tmp, path, ec);
-    }
-    if (file.fail() || ec) {
-        fs::remove(path_tmp, ec);
+    const std::string path_str = path.string();
+    if (!llama_common_safe_write_file_rust(
+            (const uint8_t *) path_str.data(), path_str.size(),
+            (const uint8_t *) data.data(), data.size())) {
         throw std::runtime_error("failed to write file: " + path.string());
     }
 }
@@ -22043,33 +22034,9 @@ hf_files get_repo_files(const std::string & repo_id,
 }
 
 static std::string get_cached_ref(const fs::path & repo_path) {
-    fs::path refs_path = repo_path / "refs";
-    if (!fs::is_directory(refs_path)) {
-        return {};
-    }
-    std::string fallback;
-
-    for (const auto & entry : fs::directory_iterator(refs_path)) {
-        if (!entry.is_regular_file()) {
-            continue;
-        }
-        std::ifstream f(entry.path());
-        std::string commit;
-        if (!f || !std::getline(f, commit) || commit.empty()) {
-            continue;
-        }
-        if (!llama_common_hf_is_valid_commit_rust((const uint8_t *) commit.data(), commit.size())) {
-            LOG_WRN("%s: skip invalid commit: %s\n", __func__, commit.c_str());
-            continue;
-        }
-        if (entry.path().filename() == "main") {
-            return commit;
-        }
-        if (fallback.empty()) {
-            fallback = commit;
-        }
-    }
-    return fallback;
+    const std::string path = repo_path.string();
+    return common_rust_string_to_std(
+            llama_common_get_cached_ref_rust((const uint8_t *) path.data(), path.size()));
 }
 
 hf_files get_cached_files(const std::string & repo_id) {

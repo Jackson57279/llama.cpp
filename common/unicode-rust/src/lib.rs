@@ -504,6 +504,62 @@ pub unsafe extern "C" fn llama_common_string_ends_with_rust(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn llama_common_bytes_equal_rust(
+    left: *const u8,
+    left_len: usize,
+    right: *const u8,
+    right_len: usize,
+) -> bool {
+    let Some((left, right)) = byte_pair(left, left_len, right, right_len) else {
+        return false;
+    };
+    left == right
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn llama_common_string_find_partial_stop_rust(
+    data: *const u8,
+    len: usize,
+    stop: *const u8,
+    stop_len: usize,
+) -> usize {
+    let Some((data, stop)) = byte_pair(data, len, stop, stop_len) else {
+        return usize::MAX;
+    };
+    string_find_partial_stop(data, stop)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn llama_common_string_remove_suffix_len_rust(
+    data: *const u8,
+    len: usize,
+    suffix: *const u8,
+    suffix_len: usize,
+) -> usize {
+    let Some((data, suffix)) = byte_pair(data, len, suffix, suffix_len) else {
+        return usize::MAX;
+    };
+    if data.ends_with(suffix) {
+        data.len() - suffix.len()
+    } else {
+        usize::MAX
+    }
+}
+
+fn string_find_partial_stop(data: &[u8], stop: &[u8]) -> usize {
+    if !data.is_empty() && !stop.is_empty() {
+        let max_len = data.len().min(stop.len());
+        let last_char = data[data.len() - 1];
+        for len in (1..=max_len).rev() {
+            if stop[len - 1] == last_char && data.ends_with(&stop[..len]) {
+                return data.len() - len;
+            }
+        }
+    }
+    usize::MAX
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn llama_common_glob_match_rust(
     pattern: *const u8,
     pattern_len: usize,
@@ -771,6 +827,45 @@ pub unsafe extern "C" fn llama_common_parse_bool_value_rust(value: *const c_char
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn llama_common_parse_bool_arg_rust(
+    neg_args: *const StringView,
+    neg_args_len: usize,
+    key: *const u8,
+    key_len: usize,
+    value: *const u8,
+    value_len: usize,
+) -> UnicodeString {
+    if (neg_args.is_null() && neg_args_len != 0) || (key.is_null() && key_len != 0) {
+        return into_ffi(Vec::new());
+    }
+    let Some(value) = byte_slice(value, value_len) else {
+        return into_ffi(Vec::new());
+    };
+    let neg_args = if neg_args_len == 0 {
+        &[]
+    } else {
+        slice::from_raw_parts(neg_args, neg_args_len)
+    };
+    let key = if key_len == 0 {
+        &[]
+    } else {
+        slice::from_raw_parts(key, key_len)
+    };
+    parse_bool_arg(neg_args, key, value)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn llama_common_read_file_rust(
+    path: *const u8,
+    path_len: usize,
+) -> UnicodeString {
+    let Some(path) = byte_slice(path, path_len) else {
+        return null_string();
+    };
+    read_file(path)
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn llama_common_parse_cpu_mask_rust(
     mask: *const u8,
     mask_len: usize,
@@ -890,6 +985,19 @@ pub extern "C" fn llama_common_bool_to_string_rust(value: bool) -> *const c_char
 }
 
 #[no_mangle]
+pub extern "C" fn llama_common_default_thread_count_windows_rust(
+    num_physical_cores: c_int,
+    default_threads: c_int,
+) -> c_int {
+    default_thread_count_windows(num_physical_cores, default_threads)
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_default_thread_count_rust(n_threads: u32) -> c_int {
+    default_thread_count(n_threads)
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn llama_common_lr_opt_init_rust(
     lr0: f32,
     lr_min: f32,
@@ -935,8 +1043,437 @@ pub extern "C" fn llama_common_time_us_rust() -> i64 {
 }
 
 #[no_mangle]
+pub extern "C" fn llama_common_sampler_prob_desc_rust(left: f32, right: f32) -> bool {
+    sampler_prob_desc(left, right)
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_marker_is_opener_rust(c: u8) -> bool {
+    marker_is_opener(c)
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_marker_is_closer_rust(opener: u8, c: u8) -> bool {
+    marker_is_closer(opener, c)
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_content_is_always_wrapped_rust(
+    mode: c_int,
+    start_len: usize,
+    end_len: usize,
+) -> bool {
+    content_is_always_wrapped(mode, start_len, end_len)
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_cpu_has_hybrid_bit_rust(edx: u32) -> bool {
+    cpu_has_hybrid_bit(edx)
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_cpu_is_intel_atom_core_type_rust(eax: u32) -> bool {
+    cpu_is_intel_atom_core_type(eax)
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_any_terminal_rust(stdout_is_tty: bool, stderr_is_tty: bool) -> bool {
+    stdout_is_tty || stderr_is_tty
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_arg_has_env_value_rust(
+    has_env: bool,
+    has_neg_env_value: bool,
+    has_env_value: bool,
+) -> bool {
+    arg_has_env_value(has_env, has_neg_env_value, has_env_value)
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_jinja_int_is_odd_rust(value: i64) -> bool {
+    value % 2 != 0
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_jinja_int_is_even_rust(value: i64) -> bool {
+    value % 2 == 0
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_jinja_int_abs_rust(value: i64) -> i64 {
+    if value < 0 {
+        value.wrapping_neg()
+    } else {
+        value
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_jinja_float_abs_rust(value: f64) -> f64 {
+    if value < 0.0 {
+        -value
+    } else {
+        value
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_jinja_is_false_rust(is_bool: bool, value: bool) -> bool {
+    is_bool && !value
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_jinja_is_true_rust(is_bool: bool, value: bool) -> bool {
+    is_bool && value
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_jinja_is_defined_rust(is_undefined: bool) -> bool {
+    !is_undefined
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_jinja_compare_f64_rust(left: f64, right: f64, op: i32) -> bool {
+    match op {
+        0 => left == right,
+        1 => left >= right,
+        2 => left > right,
+        3 => left < right,
+        4 => left != right,
+        5 => left <= right,
+        _ => false,
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_jinja_arithmetic_f64_rust(
+    left: f64,
+    right: f64,
+    op: i32,
+) -> f64 {
+    match op {
+        0 => left + right,
+        1 => left - right,
+        2 => left * right,
+        3 => left / right,
+        4 => left % right,
+        _ => f64::NAN,
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_jinja_compare_bool_rust(left: bool, right: bool, op: i32) -> bool {
+    match op {
+        0 => left == right,
+        4 => left != right,
+        _ => false,
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_jinja_bool_not_rust(value: bool) -> bool {
+    !value
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_jinja_membership_result_rust(member: bool, is_not_in: bool) -> bool {
+    if is_not_in {
+        !member
+    } else {
+        member
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn llama_common_jinja_compare_bytes_rust(
+    left: *const u8,
+    left_len: usize,
+    right: *const u8,
+    right_len: usize,
+    op: i32,
+) -> bool {
+    let Some(left) = byte_slice(left, left_len) else {
+        return false;
+    };
+    let Some(right) = byte_slice(right, right_len) else {
+        return false;
+    };
+
+    match op {
+        0 => left == right,
+        1 => left >= right,
+        2 => left > right,
+        3 => left < right,
+        4 => left != right,
+        _ => false,
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_ring_buffer_is_empty_rust(size: usize) -> bool {
+    size == 0
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn llama_common_model_endpoint_rust(
+    model_endpoint: *const u8,
+    model_endpoint_len: usize,
+    hf_endpoint: *const u8,
+    hf_endpoint_len: usize,
+) -> UnicodeString {
+    let model_endpoint = if model_endpoint.is_null() {
+        None
+    } else {
+        byte_slice(model_endpoint, model_endpoint_len)
+    };
+    let hf_endpoint = if hf_endpoint.is_null() {
+        None
+    } else {
+        byte_slice(hf_endpoint, hf_endpoint_len)
+    };
+    model_endpoint_string(model_endpoint, hf_endpoint)
+}
+
+#[no_mangle]
 pub extern "C" fn llama_common_is_http_status_ok_rust(status: c_int) -> bool {
     (200..400).contains(&status)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn llama_common_read_etag_rust(data: *const u8, len: usize) -> UnicodeString {
+    let Some(path) = byte_slice(data, len) else {
+        return into_ffi(Vec::new());
+    };
+    read_etag(path)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn llama_common_get_cached_ref_rust(
+    data: *const u8,
+    len: usize,
+) -> UnicodeString {
+    let Some(path) = byte_slice(data, len) else {
+        return into_ffi(Vec::new());
+    };
+    get_cached_ref(path)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn llama_common_safe_write_file_rust(
+    path: *const u8,
+    path_len: usize,
+    data: *const u8,
+    data_len: usize,
+) -> bool {
+    let Some(path) = byte_slice(path, path_len) else {
+        return false;
+    };
+    let Some(data) = byte_slice(data, data_len) else {
+        return false;
+    };
+    safe_write_file(path, data)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn llama_common_fs_is_directory_rust(
+    path: *const u8,
+    path_len: usize,
+) -> bool {
+    let Some(path) = byte_slice(path, path_len) else {
+        return false;
+    };
+    fs_is_directory(path)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn llama_common_is_lfm2_template_rust(data: *const u8, len: usize) -> bool {
+    let Some(input) = byte_slice(data, len) else {
+        return false;
+    };
+    is_lfm2_template(input)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn llama_common_specialized_chat_template_rust(
+    data: *const u8,
+    len: usize,
+) -> c_int {
+    let Some(src) = byte_slice(data, len) else {
+        return 0;
+    };
+
+    if contains_subslice(src, b"[SYSTEM_PROMPT]")
+        && contains_subslice(src, b"[TOOL_CALLS]")
+        && contains_subslice(src, b"[ARGS]")
+        && !contains_subslice(src, b"[CALL_ID]")
+    {
+        return 1;
+    }
+    if contains_subslice(src, b"<|channel|>") {
+        return 2;
+    }
+    if contains_subslice(src, b">>>all") && contains_subslice(src, b">>>${recipient}") {
+        return 3;
+    }
+    if contains_subslice(src, b"<|tool_calls_section_begin|>")
+        && contains_subslice(src, b"<|tool_call_begin|>")
+    {
+        return 4;
+    }
+    if is_lfm2_template(src) {
+        return 5;
+    }
+    if contains_subslice(src, b"List of tools: [")
+        && !contains_subslice(src, b"<|tool_list_start|>")
+    {
+        return 6;
+    }
+    if contains_subslice(src, b"<|role_sep|>")
+        && contains_subslice(src, b"<|message_sep|>")
+        && !contains_subslice(src, b"<|function_call|>")
+    {
+        return 7;
+    }
+    if contains_subslice(src, b"dsml_token")
+        && contains_subslice(src, b"function_calls")
+        && contains_subslice(src, b"DSML")
+    {
+        return 8;
+    }
+    if contains_subslice(src, b"'<|tool_call>call:'") {
+        return 9;
+    }
+    0
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn llama_common_is_gemma4_modern_template_rust(
+    data: *const u8,
+    len: usize,
+) -> bool {
+    let Some(src) = byte_slice(data, len) else {
+        return false;
+    };
+    contains_subslice(src, b"{#- OpenAI Chat Completions:")
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn llama_common_needs_gpt_oss_channel_template_patch_rust(
+    data: *const u8,
+    len: usize,
+) -> bool {
+    let Some(src) = byte_slice(data, len) else {
+        return false;
+    };
+    contains_subslice(src, b"<|channel|>") && contains_subslice(src, b"in message.content or")
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn llama_common_needs_mistral_tool_calls_template_patch_rust(
+    data: *const u8,
+    len: usize,
+) -> bool {
+    let Some(src) = byte_slice(data, len) else {
+        return false;
+    };
+    contains_subslice(src, b"[TOOL_CALLS]")
+        && contains_subslice(src, b"if (message['content'] is none or")
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_grammar_should_apply_rust(
+    has_grammar: bool,
+    has_reasoning_budget: bool,
+    grammar_lazy: bool,
+    reasoning_state: c_int,
+    idle_state: c_int,
+    done_state: c_int,
+) -> bool {
+    if !has_grammar {
+        return false;
+    }
+    if !has_reasoning_budget || !grammar_lazy {
+        return true;
+    }
+    reasoning_state == idle_state || reasoning_state == done_state
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_grammar_is_empty_rust(
+    grammar_type: c_int,
+    grammar_len: usize,
+) -> bool {
+    grammar_type == 0 || grammar_len == 0
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_grammar_needs_prefill_rust(grammar_type: c_int) -> bool {
+    grammar_type == 2 || grammar_type == 3
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_has_logit_bias_rust(logit_bias_len: usize) -> bool {
+    logit_bias_len != 0
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_speculative_has_draft_rust(
+    path_len: usize,
+    hf_repo_len: usize,
+) -> bool {
+    path_len != 0 || hf_repo_len != 0
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_peg_parse_result_fail_rust(result_type: c_int) -> bool {
+    result_type == 0
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_peg_parse_result_need_more_input_rust(result_type: c_int) -> bool {
+    result_type == 2
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_peg_parse_result_success_rust(result_type: c_int) -> bool {
+    result_type == 1
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_peg_parse_flags_is_lenient_rust(flags: c_int) -> bool {
+    flags & 1 != 0
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_peg_parse_flags_is_debug_rust(flags: c_int) -> bool {
+    flags & 2 != 0
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_peg_char_range_contains_rust(
+    start: u32,
+    end: u32,
+    codepoint: u32,
+) -> bool {
+    codepoint >= start && codepoint <= end
+}
+
+#[no_mangle]
+pub extern "C" fn llama_common_chat_msg_is_empty_rust(
+    content_len: usize,
+    content_parts_len: usize,
+    tool_calls_len: usize,
+    reasoning_content_len: usize,
+    tool_name_len: usize,
+    tool_call_id_len: usize,
+) -> bool {
+    content_len == 0
+        && content_parts_len == 0
+        && tool_calls_len == 0
+        && reasoning_content_len == 0
+        && tool_name_len == 0
+        && tool_call_id_len == 0
 }
 
 #[no_mangle]
@@ -1352,6 +1889,10 @@ unsafe fn matches_cstr(value: *const c_char, expected: &[&[u8]]) -> bool {
     expected.iter().any(|item| value == *item)
 }
 
+fn is_truthy_bytes(value: &[u8]) -> bool {
+    matches!(value, b"on" | b"enabled" | b"true" | b"1")
+}
+
 unsafe fn ascii_case_equal(a: *const c_char, b: *const c_char) -> bool {
     if a.is_null() || b.is_null() {
         return false;
@@ -1627,6 +2168,134 @@ fn byte_slice<'a>(data: *const u8, len: usize) -> Option<&'a [u8]> {
     }
 }
 
+fn read_etag(path: &[u8]) -> UnicodeString {
+    let Ok(path) = std::str::from_utf8(path) else {
+        return into_ffi(Vec::new());
+    };
+    let etag_path = format!("{path}.etag");
+    let Ok(contents) = std::fs::read_to_string(etag_path) else {
+        return into_ffi(Vec::new());
+    };
+    let line = contents.lines().next().unwrap_or("");
+    into_ffi(line.as_bytes().to_vec())
+}
+
+fn get_cached_ref(path: &[u8]) -> UnicodeString {
+    let Ok(path) = std::str::from_utf8(path) else {
+        return into_ffi(Vec::new());
+    };
+    let refs_path = std::path::Path::new(path).join("refs");
+    let Ok(entries) = std::fs::read_dir(refs_path) else {
+        return into_ffi(Vec::new());
+    };
+
+    let mut fallback: Option<String> = None;
+    for entry in entries.flatten() {
+        let Ok(file_type) = entry.file_type() else {
+            continue;
+        };
+        if !file_type.is_file() {
+            continue;
+        }
+        let Ok(contents) = std::fs::read_to_string(entry.path()) else {
+            continue;
+        };
+        let commit = contents.lines().next().unwrap_or("");
+        if commit.is_empty() || !is_hex_string(commit.as_bytes(), 40) {
+            continue;
+        }
+        if entry.file_name() == "main" {
+            return into_ffi(commit.as_bytes().to_vec());
+        }
+        if fallback.is_none() {
+            fallback = Some(commit.to_string());
+        }
+    }
+
+    into_ffi(fallback.unwrap_or_default().into_bytes())
+}
+
+fn safe_write_file(path: &[u8], data: &[u8]) -> bool {
+    let Ok(path) = std::str::from_utf8(path) else {
+        return false;
+    };
+    let path = std::path::Path::new(path);
+    let tmp_path = std::path::PathBuf::from(format!("{}.tmp", path.display()));
+
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() && std::fs::create_dir_all(parent).is_err() {
+            let _ = std::fs::remove_file(&tmp_path);
+            return false;
+        }
+    }
+
+    if std::fs::write(&tmp_path, data).is_err() {
+        let _ = std::fs::remove_file(&tmp_path);
+        return false;
+    }
+
+    if std::fs::rename(&tmp_path, path).is_err() {
+        let _ = std::fs::remove_file(&tmp_path);
+        return false;
+    }
+
+    true
+}
+
+fn fs_is_directory(path: &[u8]) -> bool {
+    let Ok(path) = std::str::from_utf8(path) else {
+        return false;
+    };
+    std::path::Path::new(path).is_dir()
+}
+
+fn model_endpoint_string(
+    model_endpoint: Option<&[u8]>,
+    hf_endpoint: Option<&[u8]>,
+) -> UnicodeString {
+    let endpoint = model_endpoint.or(hf_endpoint);
+    let Some(endpoint) = endpoint else {
+        return into_ffi(b"https://huggingface.co/".to_vec());
+    };
+
+    if endpoint.is_empty() {
+        return into_ffi(b"/".to_vec());
+    }
+
+    let mut out = endpoint.to_vec();
+    if !out.ends_with(b"/") {
+        out.push(b'/');
+    }
+    into_ffi(out)
+}
+
+fn parse_bool_arg(neg_args: &[StringView], key: &[u8], value: &[u8]) -> UnicodeString {
+    for neg_arg in neg_args {
+        let Some(neg_arg) = byte_slice(neg_arg.data, neg_arg.len) else {
+            continue;
+        };
+        let stripped = strip_leading_dashes_bytes(neg_arg);
+        if stripped == key {
+            return if is_truthy_bytes(value) {
+                into_ffi(b"false".to_vec())
+            } else {
+                into_ffi(b"true".to_vec())
+            };
+        }
+    }
+    into_ffi(value.to_vec())
+}
+
+fn read_file(path: &[u8]) -> UnicodeString {
+    let Ok(path) = std::str::from_utf8(path) else {
+        return null_string();
+    };
+    match std::fs::read(path) {
+        Ok(data) => into_ffi(data),
+        Err(_) => null_string(),
+    }
+}
+
 fn common_prefix_len(left: &[u8], right: &[u8]) -> usize {
     left.iter()
         .zip(right.iter())
@@ -1666,6 +2335,14 @@ fn find_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     haystack
         .windows(needle.len())
         .position(|window| window == needle)
+}
+
+fn contains_subslice(haystack: &[u8], needle: &[u8]) -> bool {
+    find_subslice(haystack, needle).is_some()
+}
+
+fn is_lfm2_template(src: &[u8]) -> bool {
+    contains_subslice(src, b"<|tool_list_start|>") && contains_subslice(src, b"<|tool_list_end|>")
 }
 
 fn regex_escape(input: &[u8]) -> UnicodeString {
@@ -2098,8 +2775,12 @@ fn add_wrapped_line(line: &[u8], max_char_per_line: usize, result: &mut Vec<Vec<
 }
 
 fn rm_leading_dashes(input: &[u8]) -> UnicodeString {
+    into_ffi(strip_leading_dashes_bytes(input).to_vec())
+}
+
+fn strip_leading_dashes_bytes(input: &[u8]) -> &[u8] {
     let start = input.iter().take_while(|&&byte| byte == b'-').count();
-    into_ffi(input[start..].to_vec())
+    &input[start..]
 }
 
 fn until_common_prefix(full: &[u8], left: &[u8], right: &[u8]) -> UnicodeString {
@@ -2344,11 +3025,58 @@ fn lr_opt_get_lr(lr0: f32, lr_min: f32, decay_epochs: f32, scale_epoch: f32, epo
     }
 }
 
+fn default_thread_count_windows(num_physical_cores: c_int, default_threads: c_int) -> c_int {
+    if num_physical_cores > 0 {
+        num_physical_cores
+    } else {
+        default_threads
+    }
+}
+
+fn default_thread_count(n_threads: u32) -> c_int {
+    if n_threads == 0 {
+        4
+    } else if n_threads <= 4 {
+        n_threads as c_int
+    } else {
+        (n_threads / 2) as c_int
+    }
+}
+
 fn time_us() -> i64 {
     match SystemTime::now().duration_since(UNIX_EPOCH) {
         Ok(duration) => duration.as_micros().min(i64::MAX as u128) as i64,
         Err(err) => -(err.duration().as_micros().min(i64::MAX as u128) as i64),
     }
+}
+
+fn sampler_prob_desc(left: f32, right: f32) -> bool {
+    left > right
+}
+
+fn marker_is_opener(c: u8) -> bool {
+    c == b'<' || c == b'['
+}
+
+fn marker_is_closer(opener: u8, c: u8) -> bool {
+    (opener == b'<' && c == b'>') || (opener == b'[' && c == b']')
+}
+
+fn content_is_always_wrapped(mode: c_int, start_len: usize, end_len: usize) -> bool {
+    mode == 1 && start_len != 0 && end_len != 0
+}
+
+fn cpu_has_hybrid_bit(edx: u32) -> bool {
+    edx & (1u32 << 15) != 0
+}
+
+fn cpu_is_intel_atom_core_type(eax: u32) -> bool {
+    const INTEL_ATOM: u32 = 0x20;
+    ((eax & 0xff00_0000) >> 24) == INTEL_ATOM
+}
+
+fn arg_has_env_value(has_env: bool, has_neg_env_value: bool, has_env_value: bool) -> bool {
+    has_neg_env_value || (has_env && has_env_value)
 }
 
 fn gguf_filename_is_model(filepath: &[u8]) -> bool {
@@ -2945,6 +3673,13 @@ fn into_ffi(mut bytes: Vec<u8>) -> UnicodeString {
     let data = bytes.as_mut_ptr();
     std::mem::forget(bytes);
     UnicodeString { data, len }
+}
+
+fn null_string() -> UnicodeString {
+    UnicodeString {
+        data: std::ptr::null_mut(),
+        len: 0,
+    }
 }
 
 #[cfg(test)]
@@ -3888,6 +4623,58 @@ mod tests {
     }
 
     #[test]
+    fn parses_negated_bool_args() {
+        unsafe {
+            let neg = [StringView {
+                data: b"--no-cache".as_ptr(),
+                len: "--no-cache".len(),
+            }];
+
+            let flipped_false = llama_common_parse_bool_arg_rust(
+                neg.as_ptr(),
+                neg.len(),
+                b"no-cache".as_ptr(),
+                "no-cache".len(),
+                b"true".as_ptr(),
+                "true".len(),
+            );
+            assert_eq!(
+                std::slice::from_raw_parts(flipped_false.data, flipped_false.len),
+                b"false"
+            );
+            llama_common_unicode_string_free(flipped_false);
+
+            let flipped_true = llama_common_parse_bool_arg_rust(
+                neg.as_ptr(),
+                neg.len(),
+                b"no-cache".as_ptr(),
+                "no-cache".len(),
+                b"0".as_ptr(),
+                "0".len(),
+            );
+            assert_eq!(
+                std::slice::from_raw_parts(flipped_true.data, flipped_true.len),
+                b"true"
+            );
+            llama_common_unicode_string_free(flipped_true);
+
+            let unchanged = llama_common_parse_bool_arg_rust(
+                neg.as_ptr(),
+                neg.len(),
+                b"cache".as_ptr(),
+                "cache".len(),
+                b"auto".as_ptr(),
+                "auto".len(),
+            );
+            assert_eq!(
+                std::slice::from_raw_parts(unchanged.data, unchanged.len),
+                b"auto"
+            );
+            llama_common_unicode_string_free(unchanged);
+        }
+    }
+
+    #[test]
     fn parses_openai_compatible_tool_choice() {
         unsafe {
             assert_eq!(
@@ -4185,11 +4972,223 @@ mod tests {
     }
 
     #[test]
+    fn selects_default_thread_counts() {
+        assert_eq!(llama_common_default_thread_count_windows_rust(12, 4), 12);
+        assert_eq!(llama_common_default_thread_count_windows_rust(0, 4), 4);
+        assert_eq!(llama_common_default_thread_count_windows_rust(-1, 6), 6);
+
+        assert_eq!(llama_common_default_thread_count_rust(0), 4);
+        assert_eq!(llama_common_default_thread_count_rust(1), 1);
+        assert_eq!(llama_common_default_thread_count_rust(4), 4);
+        assert_eq!(llama_common_default_thread_count_rust(6), 3);
+        assert_eq!(llama_common_default_thread_count_rust(16), 8);
+    }
+
+    #[test]
+    fn compares_sampler_probabilities_descending() {
+        assert!(llama_common_sampler_prob_desc_rust(0.75, 0.25));
+        assert!(!llama_common_sampler_prob_desc_rust(0.25, 0.75));
+        assert!(!llama_common_sampler_prob_desc_rust(0.5, 0.5));
+    }
+
+    #[test]
+    fn classifies_marker_delimiters() {
+        assert!(llama_common_marker_is_opener_rust(b'<'));
+        assert!(llama_common_marker_is_opener_rust(b'['));
+        assert!(!llama_common_marker_is_opener_rust(b'{'));
+
+        assert!(llama_common_marker_is_closer_rust(b'<', b'>'));
+        assert!(llama_common_marker_is_closer_rust(b'[', b']'));
+        assert!(!llama_common_marker_is_closer_rust(b'<', b']'));
+        assert!(!llama_common_marker_is_closer_rust(b'[', b'>'));
+    }
+
+    #[test]
+    fn checks_content_always_wrapped_state() {
+        assert!(llama_common_content_is_always_wrapped_rust(1, 1, 1));
+        assert!(!llama_common_content_is_always_wrapped_rust(0, 1, 1));
+        assert!(!llama_common_content_is_always_wrapped_rust(2, 1, 1));
+        assert!(!llama_common_content_is_always_wrapped_rust(1, 0, 1));
+        assert!(!llama_common_content_is_always_wrapped_rust(1, 1, 0));
+    }
+
+    #[test]
+    fn checks_platform_runtime_predicates() {
+        assert!(llama_common_cpu_has_hybrid_bit_rust(1 << 15));
+        assert!(!llama_common_cpu_has_hybrid_bit_rust(1 << 14));
+
+        assert!(llama_common_cpu_is_intel_atom_core_type_rust(0x20 << 24));
+        assert!(!llama_common_cpu_is_intel_atom_core_type_rust(0x40 << 24));
+
+        assert!(llama_common_any_terminal_rust(true, false));
+        assert!(llama_common_any_terminal_rust(false, true));
+        assert!(!llama_common_any_terminal_rust(false, false));
+
+        assert!(llama_common_arg_has_env_value_rust(true, true, false));
+        assert!(llama_common_arg_has_env_value_rust(true, false, true));
+        assert!(!llama_common_arg_has_env_value_rust(true, false, false));
+        assert!(!llama_common_arg_has_env_value_rust(false, false, true));
+    }
+
+    #[test]
+    fn checks_jinja_numeric_predicates() {
+        assert!(llama_common_jinja_int_is_odd_rust(3));
+        assert!(llama_common_jinja_int_is_odd_rust(-3));
+        assert!(!llama_common_jinja_int_is_odd_rust(4));
+
+        assert!(llama_common_jinja_int_is_even_rust(4));
+        assert!(llama_common_jinja_int_is_even_rust(-4));
+        assert!(!llama_common_jinja_int_is_even_rust(3));
+
+        assert_eq!(llama_common_jinja_int_abs_rust(5), 5);
+        assert_eq!(llama_common_jinja_int_abs_rust(-5), 5);
+        assert_eq!(llama_common_jinja_int_abs_rust(i64::MIN), i64::MIN);
+
+        assert_eq!(llama_common_jinja_float_abs_rust(2.5), 2.5);
+        assert_eq!(llama_common_jinja_float_abs_rust(-2.5), 2.5);
+        assert_eq!(
+            llama_common_jinja_float_abs_rust(-0.0).to_bits(),
+            (-0.0f64).to_bits()
+        );
+    }
+
+    #[test]
+    fn checks_jinja_boolean_state_predicates() {
+        assert!(llama_common_jinja_is_false_rust(true, false));
+        assert!(!llama_common_jinja_is_false_rust(true, true));
+        assert!(!llama_common_jinja_is_false_rust(false, false));
+
+        assert!(llama_common_jinja_is_true_rust(true, true));
+        assert!(!llama_common_jinja_is_true_rust(true, false));
+        assert!(!llama_common_jinja_is_true_rust(false, true));
+
+        assert!(llama_common_jinja_is_defined_rust(false));
+        assert!(!llama_common_jinja_is_defined_rust(true));
+    }
+
+    #[test]
+    fn compares_jinja_scalar_values_by_compare_op() {
+        assert!(llama_common_jinja_compare_f64_rust(2.0, 2.0, 0));
+        assert!(llama_common_jinja_compare_f64_rust(3.0, 2.0, 1));
+        assert!(llama_common_jinja_compare_f64_rust(3.0, 2.0, 2));
+        assert!(llama_common_jinja_compare_f64_rust(1.0, 2.0, 3));
+        assert!(llama_common_jinja_compare_f64_rust(1.0, 2.0, 4));
+        assert!(llama_common_jinja_compare_f64_rust(1.0, 2.0, 5));
+        assert!(!llama_common_jinja_compare_f64_rust(1.0, 2.0, 99));
+
+        assert_eq!(llama_common_jinja_arithmetic_f64_rust(2.0, 3.0, 0), 5.0);
+        assert_eq!(llama_common_jinja_arithmetic_f64_rust(2.0, 3.0, 1), -1.0);
+        assert_eq!(llama_common_jinja_arithmetic_f64_rust(2.0, 3.0, 2), 6.0);
+        assert_eq!(llama_common_jinja_arithmetic_f64_rust(6.0, 3.0, 3), 2.0);
+        assert_eq!(llama_common_jinja_arithmetic_f64_rust(7.0, 3.0, 4), 1.0);
+        assert!(llama_common_jinja_arithmetic_f64_rust(1.0, 2.0, 99).is_nan());
+
+        assert!(llama_common_jinja_compare_bool_rust(true, true, 0));
+        assert!(llama_common_jinja_compare_bool_rust(true, false, 4));
+        assert!(!llama_common_jinja_compare_bool_rust(true, false, 1));
+
+        assert!(llama_common_jinja_bool_not_rust(false));
+        assert!(!llama_common_jinja_bool_not_rust(true));
+        assert!(llama_common_jinja_membership_result_rust(true, false));
+        assert!(!llama_common_jinja_membership_result_rust(false, false));
+        assert!(!llama_common_jinja_membership_result_rust(true, true));
+        assert!(llama_common_jinja_membership_result_rust(false, true));
+
+        unsafe {
+            assert!(llama_common_jinja_compare_bytes_rust(
+                b"abc".as_ptr(),
+                3,
+                b"abc".as_ptr(),
+                3,
+                0
+            ));
+            assert!(llama_common_jinja_compare_bytes_rust(
+                b"abd".as_ptr(),
+                3,
+                b"abc".as_ptr(),
+                3,
+                1
+            ));
+            assert!(llama_common_jinja_compare_bytes_rust(
+                b"abd".as_ptr(),
+                3,
+                b"abc".as_ptr(),
+                3,
+                2
+            ));
+            assert!(llama_common_jinja_compare_bytes_rust(
+                b"abc".as_ptr(),
+                3,
+                b"abd".as_ptr(),
+                3,
+                3
+            ));
+            assert!(llama_common_jinja_compare_bytes_rust(
+                b"abc".as_ptr(),
+                3,
+                b"abd".as_ptr(),
+                3,
+                4
+            ));
+            assert!(!llama_common_jinja_compare_bytes_rust(
+                std::ptr::null(),
+                1,
+                b"abd".as_ptr(),
+                3,
+                0
+            ));
+        }
+    }
+
+    #[test]
+    fn checks_ring_buffer_empty_predicate() {
+        assert!(llama_common_ring_buffer_is_empty_rust(0));
+        assert!(!llama_common_ring_buffer_is_empty_rust(1));
+    }
+
+    #[test]
     fn returns_microsecond_epoch_time() {
         let first = llama_common_time_us_rust();
         let second = llama_common_time_us_rust();
         assert!(first > 0);
         assert!(second >= first);
+    }
+
+    #[test]
+    fn normalizes_model_endpoints() {
+        unsafe {
+            let default =
+                llama_common_model_endpoint_rust(std::ptr::null(), 0, std::ptr::null(), 0);
+            assert_eq!(
+                std::slice::from_raw_parts(default.data, default.len),
+                b"https://huggingface.co/"
+            );
+            llama_common_unicode_string_free(default);
+
+            let hf = llama_common_model_endpoint_rust(
+                std::ptr::null(),
+                0,
+                b"https://mirror.example".as_ptr(),
+                "https://mirror.example".len(),
+            );
+            assert_eq!(
+                std::slice::from_raw_parts(hf.data, hf.len),
+                b"https://mirror.example/"
+            );
+            llama_common_unicode_string_free(hf);
+
+            let model = llama_common_model_endpoint_rust(
+                b"https://models.example/".as_ptr(),
+                "https://models.example/".len(),
+                b"https://mirror.example".as_ptr(),
+                "https://mirror.example".len(),
+            );
+            assert_eq!(
+                std::slice::from_raw_parts(model.data, model.len),
+                b"https://models.example/"
+            );
+            llama_common_unicode_string_free(model);
+        }
     }
 
     #[test]
@@ -4200,6 +5199,410 @@ mod tests {
         assert!(llama_common_is_http_status_ok_rust(399));
         assert!(!llama_common_is_http_status_ok_rust(400));
         assert!(!llama_common_is_http_status_ok_rust(500));
+    }
+
+    #[test]
+    fn reads_first_etag_line() {
+        unsafe {
+            let base = std::env::temp_dir().join(format!(
+                "llama-common-etag-test-{}-{}",
+                std::process::id(),
+                llama_common_time_us_rust()
+            ));
+            let etag = base.with_extension("etag");
+            std::fs::write(&etag, "first\nsecond\n").unwrap();
+
+            let base = base.to_string_lossy();
+            let value = llama_common_read_etag_rust(base.as_bytes().as_ptr(), base.len());
+            assert_eq!(
+                std::str::from_utf8(std::slice::from_raw_parts(value.data, value.len)).unwrap(),
+                "first"
+            );
+            llama_common_unicode_string_free(value);
+
+            let missing = format!("{base}.missing");
+            let value = llama_common_read_etag_rust(missing.as_bytes().as_ptr(), missing.len());
+            assert_eq!(value.len, 0);
+            llama_common_unicode_string_free(value);
+
+            let value = llama_common_read_etag_rust(std::ptr::null(), 1);
+            assert_eq!(value.len, 0);
+            llama_common_unicode_string_free(value);
+
+            let _ = std::fs::remove_file(etag);
+        }
+    }
+
+    #[test]
+    fn reads_cached_ref_from_refs_directory() {
+        unsafe {
+            let repo = std::env::temp_dir().join(format!(
+                "llama-common-ref-test-{}-{}",
+                std::process::id(),
+                llama_common_time_us_rust()
+            ));
+            let refs = repo.join("refs");
+            std::fs::create_dir_all(&refs).unwrap();
+            std::fs::write(
+                refs.join("dev"),
+                "0123456789abcdef0123456789abcdef01234567\n",
+            )
+            .unwrap();
+
+            let repo_text = repo.to_string_lossy();
+            let value =
+                llama_common_get_cached_ref_rust(repo_text.as_bytes().as_ptr(), repo_text.len());
+            assert_eq!(
+                std::str::from_utf8(std::slice::from_raw_parts(value.data, value.len)).unwrap(),
+                "0123456789abcdef0123456789abcdef01234567"
+            );
+            llama_common_unicode_string_free(value);
+
+            std::fs::write(
+                refs.join("main"),
+                "ffffffffffffffffffffffffffffffffffffffff\n",
+            )
+            .unwrap();
+            std::fs::write(refs.join("bad"), "not-a-commit\n").unwrap();
+            let value =
+                llama_common_get_cached_ref_rust(repo_text.as_bytes().as_ptr(), repo_text.len());
+            assert_eq!(
+                std::str::from_utf8(std::slice::from_raw_parts(value.data, value.len)).unwrap(),
+                "ffffffffffffffffffffffffffffffffffffffff"
+            );
+            llama_common_unicode_string_free(value);
+
+            let missing = format!("{repo_text}.missing");
+            let value =
+                llama_common_get_cached_ref_rust(missing.as_bytes().as_ptr(), missing.len());
+            assert_eq!(value.len, 0);
+            llama_common_unicode_string_free(value);
+
+            let _ = std::fs::remove_dir_all(repo);
+        }
+    }
+
+    #[test]
+    fn safely_writes_file_via_temp_path() {
+        unsafe {
+            let root = std::env::temp_dir().join(format!(
+                "llama-common-write-test-{}-{}",
+                std::process::id(),
+                llama_common_time_us_rust()
+            ));
+            let target = root.join("nested").join("file.txt");
+            let target_text = target.to_string_lossy();
+            assert!(llama_common_safe_write_file_rust(
+                target_text.as_bytes().as_ptr(),
+                target_text.len(),
+                b"payload".as_ptr(),
+                7,
+            ));
+            assert_eq!(std::fs::read_to_string(&target).unwrap(), "payload");
+            assert!(!target.with_extension("txt.tmp").exists());
+
+            assert!(!llama_common_safe_write_file_rust(
+                std::ptr::null(),
+                1,
+                b"payload".as_ptr(),
+                7,
+            ));
+            assert!(!llama_common_safe_write_file_rust(
+                target_text.as_bytes().as_ptr(),
+                target_text.len(),
+                std::ptr::null(),
+                1,
+            ));
+
+            let _ = std::fs::remove_dir_all(root);
+        }
+    }
+
+    #[test]
+    fn detects_filesystem_directories() {
+        unsafe {
+            let root = std::env::temp_dir().join(format!(
+                "llama-common-is-dir-test-{}-{}",
+                std::process::id(),
+                llama_common_time_us_rust()
+            ));
+            let nested = root.join("nested");
+            std::fs::create_dir_all(&nested).unwrap();
+            let file = root.join("file.txt");
+            std::fs::write(&file, "payload").unwrap();
+
+            let nested_text = nested.to_string_lossy();
+            assert!(llama_common_fs_is_directory_rust(
+                nested_text.as_bytes().as_ptr(),
+                nested_text.len()
+            ));
+
+            let file_text = file.to_string_lossy();
+            assert!(!llama_common_fs_is_directory_rust(
+                file_text.as_bytes().as_ptr(),
+                file_text.len()
+            ));
+
+            let missing = root.join("missing");
+            let missing_text = missing.to_string_lossy();
+            assert!(!llama_common_fs_is_directory_rust(
+                missing_text.as_bytes().as_ptr(),
+                missing_text.len()
+            ));
+            assert!(!llama_common_fs_is_directory_rust(std::ptr::null(), 1));
+
+            let _ = std::fs::remove_dir_all(root);
+        }
+    }
+
+    #[test]
+    fn reads_files_as_bytes() {
+        unsafe {
+            let root = std::env::temp_dir().join(format!(
+                "llama-common-read-file-test-{}-{}",
+                std::process::id(),
+                llama_common_time_us_rust()
+            ));
+            std::fs::create_dir_all(&root).unwrap();
+            let file = root.join("input.bin");
+            std::fs::write(&file, b"line\n\xff").unwrap();
+
+            let file_text = file.to_string_lossy();
+            let content =
+                llama_common_read_file_rust(file_text.as_bytes().as_ptr(), file_text.len());
+            assert_eq!(
+                std::slice::from_raw_parts(content.data, content.len),
+                b"line\n\xff"
+            );
+            llama_common_unicode_string_free(content);
+
+            let missing = root.join("missing.txt");
+            let missing_text = missing.to_string_lossy();
+            let content =
+                llama_common_read_file_rust(missing_text.as_bytes().as_ptr(), missing_text.len());
+            assert!(content.data.is_null());
+            llama_common_unicode_string_free(content);
+
+            let content = llama_common_read_file_rust(std::ptr::null(), 1);
+            assert!(content.data.is_null());
+            llama_common_unicode_string_free(content);
+
+            let _ = std::fs::remove_dir_all(root);
+        }
+    }
+
+    #[test]
+    fn detects_lfm2_templates() {
+        unsafe {
+            let src = b"prefix <|tool_list_start|>[]<|tool_list_end|> suffix";
+            assert!(llama_common_is_lfm2_template_rust(src.as_ptr(), src.len()));
+
+            let missing_end = b"<|tool_list_start|>[]";
+            assert!(!llama_common_is_lfm2_template_rust(
+                missing_end.as_ptr(),
+                missing_end.len()
+            ));
+            assert!(!llama_common_is_lfm2_template_rust(std::ptr::null(), 1));
+        }
+    }
+
+    #[test]
+    fn classifies_specialized_chat_templates() {
+        unsafe {
+            let cases: &[(&[u8], c_int)] = &[
+                (b"[SYSTEM_PROMPT] [TOOL_CALLS] [ARGS]", 1),
+                (b"<|channel|>analysis", 2),
+                (b">>>all\n>>>${recipient}", 3),
+                (b"<|tool_calls_section_begin|><|tool_call_begin|>", 4),
+                (b"<|tool_list_start|>[]<|tool_list_end|>", 5),
+                (b"List of tools: []", 6),
+                (b"<|role_sep|><|message_sep|>", 7),
+                (b"dsml_token function_calls DSML", 8),
+                (b"{{ '<|tool_call>call:' }}", 9),
+                (b"plain template", 0),
+            ];
+
+            for &(src, expected) in cases {
+                assert_eq!(
+                    llama_common_specialized_chat_template_rust(src.as_ptr(), src.len()),
+                    expected
+                );
+            }
+
+            let mistral_small = b"[SYSTEM_PROMPT] [TOOL_CALLS] [ARGS] [CALL_ID]";
+            assert_eq!(
+                llama_common_specialized_chat_template_rust(
+                    mistral_small.as_ptr(),
+                    mistral_small.len()
+                ),
+                0
+            );
+            let lfm25_with_lfm2_marker = b"List of tools: [] <|tool_list_start|>";
+            assert_eq!(
+                llama_common_specialized_chat_template_rust(
+                    lfm25_with_lfm2_marker.as_ptr(),
+                    lfm25_with_lfm2_marker.len()
+                ),
+                0
+            );
+            let gigachat_function_call = b"<|role_sep|><|message_sep|><|function_call|>";
+            assert_eq!(
+                llama_common_specialized_chat_template_rust(
+                    gigachat_function_call.as_ptr(),
+                    gigachat_function_call.len()
+                ),
+                0
+            );
+            assert_eq!(
+                llama_common_specialized_chat_template_rust(std::ptr::null(), 1),
+                0
+            );
+        }
+    }
+
+    #[test]
+    fn detects_modern_gemma4_templates() {
+        unsafe {
+            let modern = b"{#- OpenAI Chat Completions: tool support";
+            assert!(llama_common_is_gemma4_modern_template_rust(
+                modern.as_ptr(),
+                modern.len()
+            ));
+            let old = b"{{ '<|tool_call>call:' }}";
+            assert!(!llama_common_is_gemma4_modern_template_rust(
+                old.as_ptr(),
+                old.len()
+            ));
+            assert!(!llama_common_is_gemma4_modern_template_rust(
+                std::ptr::null(),
+                1
+            ));
+        }
+    }
+
+    #[test]
+    fn detects_chat_template_workaround_guards() {
+        unsafe {
+            let gpt_oss =
+                b"<|channel|> {% if '<|channel|>analysis<|message|>' in message.content or";
+            assert!(llama_common_needs_gpt_oss_channel_template_patch_rust(
+                gpt_oss.as_ptr(),
+                gpt_oss.len()
+            ));
+            assert!(!llama_common_needs_gpt_oss_channel_template_patch_rust(
+                b"<|channel|>".as_ptr(),
+                b"<|channel|>".len()
+            ));
+
+            let mistral =
+                b"[TOOL_CALLS] {% if (message['content'] is none or message['content'] == '') %}";
+            assert!(llama_common_needs_mistral_tool_calls_template_patch_rust(
+                mistral.as_ptr(),
+                mistral.len()
+            ));
+            assert!(!llama_common_needs_mistral_tool_calls_template_patch_rust(
+                b"[TOOL_CALLS]".as_ptr(),
+                b"[TOOL_CALLS]".len()
+            ));
+            assert!(!llama_common_needs_gpt_oss_channel_template_patch_rust(
+                std::ptr::null(),
+                1
+            ));
+            assert!(!llama_common_needs_mistral_tool_calls_template_patch_rust(
+                std::ptr::null(),
+                1
+            ));
+        }
+    }
+
+    #[test]
+    fn decides_when_grammar_should_apply() {
+        assert!(!llama_common_grammar_should_apply_rust(
+            false, false, false, 0, 0, 2
+        ));
+        assert!(llama_common_grammar_should_apply_rust(
+            true, false, false, 1, 0, 2
+        ));
+        assert!(llama_common_grammar_should_apply_rust(
+            true, true, false, 1, 0, 2
+        ));
+        assert!(llama_common_grammar_should_apply_rust(
+            true, true, true, 0, 0, 2
+        ));
+        assert!(llama_common_grammar_should_apply_rust(
+            true, true, true, 2, 0, 2
+        ));
+        assert!(!llama_common_grammar_should_apply_rust(
+            true, true, true, 1, 0, 2
+        ));
+
+        assert!(llama_common_grammar_is_empty_rust(0, 12));
+        assert!(llama_common_grammar_is_empty_rust(1, 0));
+        assert!(!llama_common_grammar_is_empty_rust(1, 12));
+        assert!(!llama_common_grammar_needs_prefill_rust(0));
+        assert!(!llama_common_grammar_needs_prefill_rust(1));
+        assert!(llama_common_grammar_needs_prefill_rust(2));
+        assert!(llama_common_grammar_needs_prefill_rust(3));
+    }
+
+    #[test]
+    fn checks_common_parameter_presence_flags() {
+        assert!(!llama_common_has_logit_bias_rust(0));
+        assert!(llama_common_has_logit_bias_rust(1));
+
+        assert!(!llama_common_speculative_has_draft_rust(0, 0));
+        assert!(llama_common_speculative_has_draft_rust(1, 0));
+        assert!(llama_common_speculative_has_draft_rust(0, 1));
+        assert!(llama_common_speculative_has_draft_rust(3, 5));
+    }
+
+    #[test]
+    fn checks_peg_parse_flags_and_ranges() {
+        assert!(llama_common_peg_parse_result_fail_rust(0));
+        assert!(!llama_common_peg_parse_result_fail_rust(1));
+        assert!(llama_common_peg_parse_result_success_rust(1));
+        assert!(!llama_common_peg_parse_result_success_rust(2));
+        assert!(llama_common_peg_parse_result_need_more_input_rust(2));
+        assert!(!llama_common_peg_parse_result_need_more_input_rust(0));
+
+        assert!(!llama_common_peg_parse_flags_is_lenient_rust(0));
+        assert!(llama_common_peg_parse_flags_is_lenient_rust(1));
+        assert!(llama_common_peg_parse_flags_is_lenient_rust(3));
+        assert!(!llama_common_peg_parse_flags_is_debug_rust(1));
+        assert!(llama_common_peg_parse_flags_is_debug_rust(2));
+        assert!(llama_common_peg_parse_flags_is_debug_rust(3));
+
+        assert!(llama_common_peg_char_range_contains_rust(
+            b'a' as u32,
+            b'z' as u32,
+            b'm' as u32
+        ));
+        assert!(llama_common_peg_char_range_contains_rust(
+            b'a' as u32,
+            b'z' as u32,
+            b'a' as u32
+        ));
+        assert!(llama_common_peg_char_range_contains_rust(
+            b'a' as u32,
+            b'z' as u32,
+            b'z' as u32
+        ));
+        assert!(!llama_common_peg_char_range_contains_rust(
+            b'a' as u32,
+            b'z' as u32,
+            b'A' as u32
+        ));
+    }
+
+    #[test]
+    fn checks_chat_message_empty_state() {
+        assert!(llama_common_chat_msg_is_empty_rust(0, 0, 0, 0, 0, 0));
+        assert!(!llama_common_chat_msg_is_empty_rust(1, 0, 0, 0, 0, 0));
+        assert!(!llama_common_chat_msg_is_empty_rust(0, 1, 0, 0, 0, 0));
+        assert!(!llama_common_chat_msg_is_empty_rust(0, 0, 1, 0, 0, 0));
+        assert!(!llama_common_chat_msg_is_empty_rust(0, 0, 0, 1, 0, 0));
+        assert!(!llama_common_chat_msg_is_empty_rust(0, 0, 0, 0, 1, 0));
+        assert!(!llama_common_chat_msg_is_empty_rust(0, 0, 0, 0, 0, 1));
     }
 
     #[test]
@@ -5228,6 +6631,94 @@ mod tests {
                 std::ptr::null(),
                 1
             ));
+            assert!(llama_common_bytes_equal_rust(
+                b"same".as_ptr(),
+                4,
+                b"same".as_ptr(),
+                4
+            ));
+            assert!(!llama_common_bytes_equal_rust(
+                b"same".as_ptr(),
+                4,
+                b"diff".as_ptr(),
+                4
+            ));
+            assert!(llama_common_bytes_equal_rust(
+                b"".as_ptr(),
+                0,
+                std::ptr::null(),
+                0
+            ));
+            assert!(!llama_common_bytes_equal_rust(
+                std::ptr::null(),
+                1,
+                b"a".as_ptr(),
+                1
+            ));
+
+            assert_eq!(
+                llama_common_string_find_partial_stop_rust(
+                    b"hello wor".as_ptr(),
+                    9,
+                    b"world".as_ptr(),
+                    5,
+                ),
+                6
+            );
+            assert_eq!(
+                llama_common_string_find_partial_stop_rust(
+                    b"hello world".as_ptr(),
+                    11,
+                    b"world".as_ptr(),
+                    5,
+                ),
+                6
+            );
+            assert_eq!(
+                llama_common_string_find_partial_stop_rust(
+                    b"hello".as_ptr(),
+                    5,
+                    b"world".as_ptr(),
+                    5,
+                ),
+                usize::MAX
+            );
+            assert_eq!(
+                llama_common_string_find_partial_stop_rust(
+                    std::ptr::null(),
+                    1,
+                    b"world".as_ptr(),
+                    5,
+                ),
+                usize::MAX
+            );
+
+            assert_eq!(
+                llama_common_string_remove_suffix_len_rust(
+                    b"abcdef".as_ptr(),
+                    6,
+                    b"def".as_ptr(),
+                    3,
+                ),
+                3
+            );
+            assert_eq!(
+                llama_common_string_remove_suffix_len_rust(
+                    b"abcdef".as_ptr(),
+                    6,
+                    b"xyz".as_ptr(),
+                    3,
+                ),
+                usize::MAX
+            );
+            assert_eq!(
+                llama_common_string_remove_suffix_len_rust(b"abcdef".as_ptr(), 6, b"".as_ptr(), 0,),
+                6
+            );
+            assert_eq!(
+                llama_common_string_remove_suffix_len_rust(std::ptr::null(), 1, b"def".as_ptr(), 3,),
+                usize::MAX
+            );
         }
     }
 }
