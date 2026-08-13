@@ -119,7 +119,6 @@
 #define ggml_gemm_q8_0_4x8_q8_0_generic ggml_gemm_q8_0_4x8_q8_0
 #define ggml_vec_dot_iq1_xs_q8_K_generic ggml_vec_dot_iq1_xs_q8_K
 #define ggml_vec_dot_iq1_xxs_q8_K_generic ggml_vec_dot_iq1_xxs_q8_K
-#define ggml_vec_dot_iq1_xxxs_q8_K_generic ggml_vec_dot_iq1_xxxs_q8_K
 
 #elif defined(__POWERPC__) || defined(__powerpc__)
 // ref: https://github.com/ggml-org/llama.cpp/pull/14146#issuecomment-2972561679
