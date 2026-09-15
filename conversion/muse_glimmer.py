@@ -163,11 +163,19 @@ class MuseGlimmerAssistantModel(TextModel):
         super().set_gguf_parameters()
         h = self.hparams
 
-        self.gguf_writer.add_block_size(int(h["block_size"]))
+        self.gguf_writer.add_block_size(int(h.get("block_size", h.get("dflash_config", {}).get("block_size", 16))))
 
         # dflash.target_layers[k] refers to the inputs going into the ith layer, which come from the (i-1)th layer's output.
         # The transformers configuration refers to the outputs being recorded.
-        self.gguf_writer.add_target_layers([int(x) + 1 for x in h["target_layer_ids"]])
+        target_layer_ids = h.get("target_layer_ids") or h.get("dflash_config", {}).get("target_layer_ids", [])
+        self.gguf_writer.add_target_layers([int(x) + 1 for x in target_layer_ids])
+
+        dflash_config = h.get("dflash_config", {})
+        if "conv_kernel_size" in dflash_config or "conv_kernel_size" in h:
+            self.gguf_writer.add_conv_kernel_size(int(dflash_config.get("conv_kernel_size", h["conv_kernel_size"])))
+            self.gguf_writer.add_conv_group_size(int(dflash_config.get("conv_group_size", h["conv_group_size"])))
+            self.gguf_writer.add_selector_rank(int(dflash_config.get("selector_rank", h["selector_rank"])))
+            self.gguf_writer.add_selector_top_k(int(dflash_config.get("selector_top_k", h["selector_top_k"])))
 
         if h.get("sliding_window") and h.get("layer_types"):
             self.gguf_writer.add_sliding_window(int(h["sliding_window"]))
@@ -176,4 +184,9 @@ class MuseGlimmerAssistantModel(TextModel):
     def modify_tensors(self, data_torch: Tensor, name: str, bid: int | None) -> Iterable[tuple[str, Tensor]]:
         # DFlash defaults to NEOX (rotate_half) rope, matching transformers HF layout for Q/K, QK-norms
         # no permutation needed.
+        if name in (
+            "model.candidate_selector.predecessor_codebook",
+            "model.candidate_selector.successor_codebook",
+        ):
+            name += ".weight"
         yield (self.map_tensor_name(name), data_torch)

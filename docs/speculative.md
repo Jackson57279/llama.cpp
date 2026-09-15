@@ -74,9 +74,29 @@ llama-server -m Qwen3-4B.gguf -md Qwen3-4B-DFlash.gguf \
 
 `--spec-draft-n-max` is clamped to the draft model's trained block size.
 
+DFlash 2 drafts (`DFlash2DraftModel`, for example `z-lab/Qwen3.8-27B-DFlash2`) use the same
+`--spec-type draft-dflash` flag. The runtime detects them from `selector_top_k` metadata and
+runs the in-graph candidate selector plus local convolutions instead of independent per-position
+argmax. Convert them the same way:
+
+```bash
+python convert_hf_to_gguf.py z-lab/Qwen3.8-27B-DFlash2 \
+    --target-model-dir Qwen/Qwen3.8-27B --outtype bf16 --outfile Qwen3.8-27B-DFlash2.gguf
+
+llama-server -m Qwen3.8-27B.gguf -md Qwen3.8-27B-DFlash2.gguf \
+    --spec-type draft-dflash --spec-draft-n-max 7 -fa on --jinja
+```
+
+IQ1 target + higher-precision draft is the intended pairing: keep the target at IQ1_XS / IQ1_XXS /
+IQ1_XXXS and quantize the DFlash draft to Q8_0 or Q4_K. If you IQ1-quantize a DFlash 2 draft,
+selector, conv, and `fc.weight` stay Q8_0 so lattice scores stay usable. Do not IQ1 the draft
+backbone; DFlash drafts a full block per step and IQ1 MMVQ is capped at batch 8.
+
 See:
 
 - #22105
+- #27342
+- #27310
 
 ### DSpark (`draft-dspark`)
 
