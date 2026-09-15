@@ -119,6 +119,7 @@ class ServerProcess:
     mcp_servers_config: str | None = None
     mcp_servers_json: str | None = None
     cors_origins: str | None = None
+    extra_args: List[str] | None = None
 
     # session variables
     process: subprocess.Popen | None = None
@@ -281,6 +282,8 @@ class ServerProcess:
             server_args.append("--backend_sampling")
         if self.gcp_compat:
             env["AIP_MODE"] = "PREDICTION"
+        if self.extra_args:
+            server_args.extend(self.extra_args)
 
         args = [str(arg) for arg in [server_path, *server_args]]
         print(f"tests: starting server with: {' '.join(args)}")

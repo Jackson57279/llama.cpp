@@ -6658,6 +6658,23 @@ static void ggml_compute_backward(
     const bool src2_needs_grads = src2 && isrc2 != GGML_HASHSET_FULL && ggml_bitset_get(hash_set->used, isrc2) && grads_needed[isrc2];
 
     switch (tensor->op) {
+        case GGML_OP_SET_ROWS: {
+            // result = a; a[idxs, :] = b  (in-place row scatter)
+            // src[0] = b (values), src[1] = idxs (not differentiable), src[2] = a (destination)
+            if (src0_needs_grads) {
+                // dgrad for the scattered values: dL/db[i, j] = grad_dest[idxs[i], j]
+                struct ggml_tensor * dgrad_b = ggml_get_rows(ctx, grad, tensor->src[1]);
+                ggml_add_or_set(ctx, cgraph, isrc0, dgrad_b);
+            }
+            // dgrad for the destination buffer: rows written by b get overwritten, so the old values
+            // in those rows do not affect the output -> zero their gradient contribution.
+            if (src2_needs_grads) {
+                struct ggml_tensor * idxs = tensor->src[1];
+                struct ggml_tensor * zeros_b = ggml_fill(ctx, ggml_dup_tensor(ctx, tensor->src[0]), 0.0f);
+                struct ggml_tensor * dgrad_a = ggml_set_rows(ctx, ggml_dup_tensor(ctx, grad), zeros_b, idxs);
+                ggml_add_or_set(ctx, cgraph, isrc2, dgrad_a);
+            }
+        } break;
         case GGML_OP_DUP: {
             if (src0_needs_grads) {
                 ggml_add_or_set(ctx, cgraph, isrc0, grad);
@@ -7304,8 +7321,10 @@ void ggml_build_backward_expand(
         }
 
         // inplace operations are currently not supported
+        // (SET_ROWS backward is handled explicitly above, views are safe)
         GGML_ASSERT(!node->view_src || node->op == GGML_OP_CPY || node->op == GGML_OP_VIEW ||
-            node->op == GGML_OP_RESHAPE || node->op == GGML_OP_PERMUTE || node->op == GGML_OP_TRANSPOSE);
+            node->op == GGML_OP_RESHAPE || node->op == GGML_OP_PERMUTE || node->op == GGML_OP_TRANSPOSE ||
+            node->op == GGML_OP_SET_ROWS);
 
         const size_t ihash = ggml_hash_find(&cgraph->visited_hash_set, node);
         GGML_ASSERT(ihash != GGML_HASHSET_FULL);
@@ -7478,7 +7497,8 @@ void ggml_graph_cpy(struct ggml_cgraph * src, struct ggml_cgraph * dst) {
 }
 
 struct ggml_cgraph * ggml_graph_dup(struct ggml_context * ctx, struct ggml_cgraph * cgraph, bool force_grads) {
-    struct ggml_cgraph * result = ggml_new_graph_custom(ctx, cgraph->size, cgraph->grads || force_grads);
+    // backward expansion adds many nodes; oversize the duplicated graph when grads are enabled
+    struct ggml_cgraph * result = ggml_new_graph_custom(ctx, 4*cgraph->size, cgraph->grads || force_grads);
     ggml_graph_cpy(cgraph, result);
     return result;
 }

@@ -39,6 +39,21 @@ using json = nlohmann::ordered_json;
 
 constexpr int HTTP_POLLING_SECONDS = 1;
 
+static int32_t server_slot_n_ctx_limit(int32_t n_ctx_train, const common_params & params) {
+    int32_t n_ctx_limit = n_ctx_train;
+    if (params.rope_scaling_type != LLAMA_ROPE_SCALING_TYPE_NONE &&
+            params.rope_freq_scale > 0.0f && params.rope_freq_scale < 1.0f) {
+        const int32_t orig = (params.rope_scaling_type == LLAMA_ROPE_SCALING_TYPE_YARN && params.yarn_orig_ctx > 0)
+            ? params.yarn_orig_ctx
+            : n_ctx_train;
+        const int32_t scaled = (int32_t) (orig / params.rope_freq_scale + 0.5f);
+        if (scaled > n_ctx_limit) {
+            n_ctx_limit = scaled;
+        }
+    }
+    return n_ctx_limit;
+}
+
 static common_speculative_output_limits server_output_limits(const common_params & params) {
     if (params.embedding ||
             (params.pooling_type != LLAMA_POOLING_TYPE_UNSPECIFIED && params.pooling_type != LLAMA_POOLING_TYPE_NONE)) {
@@ -1307,11 +1322,12 @@ private:
         slot_prompt_similarity = params_base.slot_prompt_similarity;
 
         const int n_ctx_train = llama_model_n_ctx_train(model_tgt);
+        const int n_ctx_limit = server_slot_n_ctx_limit(n_ctx_train, params_base);
 
         int n_ctx_slot = llama_n_ctx_seq(ctx_tgt);
-        if (n_ctx_slot > n_ctx_train) {
-            SRV_WRN("the slot context (%d) exceeds the training context of the model (%d) - capping\n", n_ctx_slot, n_ctx_train);
-            n_ctx_slot = n_ctx_train;
+        if (n_ctx_slot > n_ctx_limit) {
+            SRV_WRN("the slot context (%d) exceeds the allowed context (%d, train %d) - capping\n", n_ctx_slot, n_ctx_limit, n_ctx_train);
+            n_ctx_slot = n_ctx_limit;
         }
 
         slots.clear();
