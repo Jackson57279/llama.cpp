@@ -719,6 +719,18 @@ static ggml_type llama_tensor_get_type(quantize_state_impl & qs, const llama_mod
             new_type = llama_tensor_get_type_impl(qs, new_type, tensor, params->ftype, tm.category);
         }
 
+        if (!manual && qs.model.arch == LLM_ARCH_DFLASH &&
+                (params->ftype == LLAMA_FTYPE_MOSTLY_IQ1_S || params->ftype == LLAMA_FTYPE_MOSTLY_IQ1_M ||
+                 ftype_is_iq1_narrow(params->ftype))) {
+            const std::string tensor_name(tensor->name);
+            if (tensor_name.rfind("selector_", 0) == 0 ||
+                    tensor_name.find(".attn_conv_") != std::string::npos ||
+                    tensor_name.find(".ffn_conv_") != std::string::npos ||
+                    tensor_name == "fc.weight") {
+                new_type = GGML_TYPE_Q8_0;
+            }
+        }
+
         // incompatible tensor shapes are handled here - fallback to a compatible type
         new_type = tensor_type_fallback(qs, tensor, new_type);
     }
