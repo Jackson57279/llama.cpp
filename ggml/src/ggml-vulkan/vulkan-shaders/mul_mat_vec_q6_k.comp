@@ -6,17 +6,26 @@
 
 layout(local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 
+shared FLOAT_TYPE sccache[2][BLOCK_SIZE/16][16];
+
 FLOAT_TYPE temp[NUM_COLS][NUM_ROWS];
+uint csel = 0;
 
 void calc_superblock(const uint a_offset, const uint b_offset, const uint itid, const uint ix, const uint ql_offset, const uint qh_offset, const uint s_offset, const uint y_offset, const uint i, const uint num_blocks_per_row, const uint first_row, const uint num_rows, const bool all_threads) {
     const uint y_idx = i * QUANT_K + y_offset;
 
-    if (!all_threads && i >= num_blocks_per_row) {
-        return;
-    }
-
     [[unroll]] for (uint n = 0; n < num_rows; ++n) {
         const uint ib0 = a_offset + (first_row+n)*num_blocks_per_row;
+        csel ^= 1;
+
+        if (!all_threads) { // when we don't have enough blocks to use all threads
+            if (i < num_blocks_per_row)
+                sccache[csel][ix][itid] = FLOAT_TYPE(data_a[ib0 + i].scales[itid]);
+            barrier();
+
+            if (i >= num_blocks_per_row)
+                continue;
+        }
 
         const uint32_t ql0_u32 =  uint32_t(data_a_packed16[ib0 + i].ql[ql_offset / 2]) | (uint32_t(data_a_packed16[ib0 + i].ql[ql_offset / 2 + 1]) << 16);
         const uint32_t ql32_u32 = uint32_t(data_a_packed16[ib0 + i].ql[ql_offset / 2 + 16]) | (uint32_t(data_a_packed16[ib0 + i].ql[ql_offset / 2 + 17]) << 16);
@@ -42,11 +51,12 @@ void calc_superblock(const uint a_offset, const uint b_offset, const uint itid, 
         const vec4 q2 = vec4(unpack8(q2_u32)) - 32;
         const vec4 q3 = vec4(unpack8(q3_u32)) - 32;
 
+        if (all_threads) {
+            sccache[csel][ix][itid] = FLOAT_TYPE(data_a[ib0 + i].scales[itid]);
+            barrier();
+        }
+
         const FLOAT_TYPE d = FLOAT_TYPE(data_a[ib0 + i].d);
-        const FLOAT_TYPE sc0 = FLOAT_TYPE(data_a[ib0 + i].scales[s_offset]);
-        const FLOAT_TYPE sc1 = FLOAT_TYPE(data_a[ib0 + i].scales[s_offset + 2]);
-        const FLOAT_TYPE sc2 = FLOAT_TYPE(data_a[ib0 + i].scales[s_offset + 4]);
-        const FLOAT_TYPE sc3 = FLOAT_TYPE(data_a[ib0 + i].scales[s_offset + 6]);
 
         [[unroll]] for (uint j = 0; j < NUM_COLS; ++j) {
             vec4 by0  = vec4(data_b_v4[(j*p.batch_stride_b + b_offset + y_idx) / 4     ]);
@@ -61,7 +71,7 @@ void calc_superblock(const uint a_offset, const uint b_offset, const uint itid, 
                 sum[2] = fma(FLOAT_TYPE(by64[l]), q2[l], sum[2]);
                 sum[3] = fma(FLOAT_TYPE(by96[l]), q3[l], sum[3]);
             }
-            temp[j][n] = fma(fma(sum[0], sc0, fma(sum[1], sc1, fma(sum[2], sc2, sum[3] * sc3))), d, temp[j][n]);
+            temp[j][n] = fma(fma(sum[0], sccache[csel][ix][s_offset], fma(sum[1], sccache[csel][ix][s_offset + 2], fma(sum[2], sccache[csel][ix][s_offset + 4], sum[3] * sccache[csel][ix][s_offset + 6]))), d, temp[j][n]);
         }
     }
 }
