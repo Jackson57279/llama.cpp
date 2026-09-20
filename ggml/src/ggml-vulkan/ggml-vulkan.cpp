@@ -969,10 +969,14 @@ struct vk_device_struct {
     vk_pipeline pipeline_group_norm_f32;
     vk_pipeline pipeline_rms_norm_f32;
     vk_pipeline pipeline_rms_norm_mul_f32;
+    vk_pipeline pipeline_rms_norm_f32_128;
+    vk_pipeline pipeline_rms_norm_mul_f32_128;
     vk_pipeline pipeline_rms_norm_partials_f32;
     vk_pipeline pipeline_rms_norm_mul_partials_f32;
     vk_pipeline pipeline_rms_norm_mul_rope_f32_f32;
     vk_pipeline pipeline_rms_norm_mul_rope_f32_f16;
+    vk_pipeline pipeline_rms_norm_mul_rope_f32_f32_128;
+    vk_pipeline pipeline_rms_norm_mul_rope_f32_f16_128;
     vk_pipeline pipeline_rms_norm_back_f32;
     vk_pipeline pipeline_l2_norm_f32;
 
@@ -5472,14 +5476,18 @@ static void ggml_vk_load_shaders(vk_device& device, vk_pipeline requested) {
     ggml_vk_create_pipeline(device, device->pipeline_norm_f32, "norm_f32", norm_f32_len, norm_f32_data, "main", 2, sizeof(vk_op_unary_push_constants), {1, 1, 1}, {}, 1);
     ggml_vk_create_pipeline(device, device->pipeline_group_norm_f32, "group_norm_f32", group_norm_f32_len, group_norm_f32_data, "main", 2, sizeof(vk_op_push_constants), {1, 1, 1}, {}, 1);
 
-    ggml_vk_create_pipeline(device, device->pipeline_rms_norm_f32, "rms_norm_f32", rms_norm_f32_len, rms_norm_f32_data, "main", 4, sizeof(vk_op_binary_push_constants), {1, 1, 1}, {0, 0}, 1, true);
-    ggml_vk_create_pipeline(device, device->pipeline_rms_norm_mul_f32, "rms_norm_mul_f32", rms_norm_f32_len, rms_norm_f32_data, "main", 4, sizeof(vk_op_binary_push_constants), {1, 1, 1}, {0, 1}, 1, true);
+    ggml_vk_create_pipeline(device, device->pipeline_rms_norm_f32, "rms_norm_f32", rms_norm_f32_len, rms_norm_f32_data, "main", 4, sizeof(vk_op_binary_push_constants), {1, 1, 1}, {512, 0}, 1, true);
+    ggml_vk_create_pipeline(device, device->pipeline_rms_norm_mul_f32, "rms_norm_mul_f32", rms_norm_f32_len, rms_norm_f32_data, "main", 4, sizeof(vk_op_binary_push_constants), {1, 1, 1}, {512, 1}, 1, true);
+    ggml_vk_create_pipeline(device, device->pipeline_rms_norm_f32_128, "rms_norm_f32_128", rms_norm_f32_len, rms_norm_f32_data, "main", 4, sizeof(vk_op_binary_push_constants), {1, 1, 1}, {128, 0}, 1, true);
+    ggml_vk_create_pipeline(device, device->pipeline_rms_norm_mul_f32_128, "rms_norm_mul_f32_128", rms_norm_f32_len, rms_norm_f32_data, "main", 4, sizeof(vk_op_binary_push_constants), {1, 1, 1}, {128, 1}, 1, true);
     ggml_vk_create_pipeline(device, device->pipeline_rms_norm_partials_f32, "rms_norm_partials_f32", rms_norm_partials_f32_len, rms_norm_partials_f32_data, "main", 4, sizeof(vk_op_binary_push_constants), {1, 1, 1}, {0, 0}, 1, true);
     ggml_vk_create_pipeline(device, device->pipeline_rms_norm_mul_partials_f32, "rms_norm_mul_partials_f32", rms_norm_partials_f32_len, rms_norm_partials_f32_data, "main", 4, sizeof(vk_op_binary_push_constants), {1, 1, 1}, {0, 1}, 1, true);
 
     if (sizeof(vk_op_rms_norm_mul_rope_push_constants) <= device->properties.limits.maxPushConstantsSize) {
-        ggml_vk_create_pipeline(device, device->pipeline_rms_norm_mul_rope_f32_f32, "rms_norm_mul_rope_f32_f32", rms_norm_mul_rope_f32_f32_len, rms_norm_mul_rope_f32_f32_data, "main", 7, sizeof(vk_op_rms_norm_mul_rope_push_constants), {1, 1, 1}, {0, 1}, 1, true);
-        ggml_vk_create_pipeline(device, device->pipeline_rms_norm_mul_rope_f32_f16, "rms_norm_mul_rope_f32_f16", rms_norm_mul_rope_f32_f16_len, rms_norm_mul_rope_f32_f16_data, "main", 7, sizeof(vk_op_rms_norm_mul_rope_push_constants), {1, 1, 1}, {0, 1}, 1, true);
+        ggml_vk_create_pipeline(device, device->pipeline_rms_norm_mul_rope_f32_f32, "rms_norm_mul_rope_f32_f32", rms_norm_mul_rope_f32_f32_len, rms_norm_mul_rope_f32_f32_data, "main", 7, sizeof(vk_op_rms_norm_mul_rope_push_constants), {1, 1, 1}, {512, 1}, 1, true);
+        ggml_vk_create_pipeline(device, device->pipeline_rms_norm_mul_rope_f32_f16, "rms_norm_mul_rope_f32_f16", rms_norm_mul_rope_f32_f16_len, rms_norm_mul_rope_f32_f16_data, "main", 7, sizeof(vk_op_rms_norm_mul_rope_push_constants), {1, 1, 1}, {512, 1}, 1, true);
+        ggml_vk_create_pipeline(device, device->pipeline_rms_norm_mul_rope_f32_f32_128, "rms_norm_mul_rope_f32_f32_128", rms_norm_mul_rope_f32_f32_len, rms_norm_mul_rope_f32_f32_data, "main", 7, sizeof(vk_op_rms_norm_mul_rope_push_constants), {1, 1, 1}, {128, 1}, 1, true);
+        ggml_vk_create_pipeline(device, device->pipeline_rms_norm_mul_rope_f32_f16_128, "rms_norm_mul_rope_f32_f16_128", rms_norm_mul_rope_f32_f16_len, rms_norm_mul_rope_f32_f16_data, "main", 7, sizeof(vk_op_rms_norm_mul_rope_push_constants), {1, 1, 1}, {128, 1}, 1, true);
     }
 
     ggml_vk_create_pipeline(device, device->pipeline_rms_norm_back_f32, "rms_norm_back_f32", rms_norm_back_f32_len, rms_norm_back_f32_data, "main", 3, sizeof(vk_op_push_constants), {1, 1, 1}, {}, 1);
@@ -11285,6 +11293,8 @@ static vk_pipeline ggml_vk_op_get_pipeline(ggml_backend_vk_context * ctx, const 
         if (src0->type == GGML_TYPE_F32 && dst->type == GGML_TYPE_F32) {
             if (ctx->do_add_rms_partials) {
                 return ctx->num_additional_fused_ops > 0 ? ctx->device->pipeline_rms_norm_mul_partials_f32 : ctx->device->pipeline_rms_norm_partials_f32;
+            } else if (ggml_nrows(src0) > 1) {
+                return ctx->num_additional_fused_ops > 0 ? ctx->device->pipeline_rms_norm_mul_f32_128 : ctx->device->pipeline_rms_norm_f32_128;
             } else {
                 return ctx->num_additional_fused_ops > 0 ? ctx->device->pipeline_rms_norm_mul_f32 : ctx->device->pipeline_rms_norm_f32;
             }
@@ -13200,7 +13210,13 @@ static void ggml_vk_rms_norm(ggml_backend_vk_context * ctx, vk_context& subctx, 
         pc.bin = bin;
         pc.rope = ggml_vk_make_rope_constants(rope, rope->src[0], tensors[4] != nullptr, false, set_rows_stride);
 
-        vk_pipeline pipeline = tensors[5]->type == GGML_TYPE_F16 ? ctx->device->pipeline_rms_norm_mul_rope_f32_f16 : ctx->device->pipeline_rms_norm_mul_rope_f32_f32;
+        vk_pipeline pipeline;
+        const bool use_128 = ggml_nrows(rms->src[0]) > 1;
+        if (tensors[5]->type == GGML_TYPE_F16) {
+            pipeline = use_128 ? ctx->device->pipeline_rms_norm_mul_rope_f32_f16_128 : ctx->device->pipeline_rms_norm_mul_rope_f32_f16;
+        } else {
+            pipeline = use_128 ? ctx->device->pipeline_rms_norm_mul_rope_f32_f32_128 : ctx->device->pipeline_rms_norm_mul_rope_f32_f32;
+        }
 
         ggml_pipeline_request_descriptor_sets(ctx, pipeline, 1);
 
