@@ -7808,6 +7808,10 @@ static vk_pipeline ggml_vk_get_dequantize_mul_mat_vec(ggml_backend_vk_context * 
         }
     }
 
+    if (ctx->device->architecture == AMD_RDNA2 && a_type == GGML_TYPE_Q6_K && m >= 32768 && k >= 1024 && num_cols == 1) {
+        dmmv_wg = DMMV_WG_SIZE_LARGE;
+    }
+
     if (b_type == GGML_TYPE_Q8_1) {
         if (ctx->device->vendor_id == VK_VENDOR_ID_INTEL) {
             dmmv_wg = DMMV_WG_SIZE_SUBGROUP;
@@ -7971,6 +7975,10 @@ static vk_pipeline ggml_vk_get_dequantize_mul_mat_vec_id(ggml_backend_vk_context
                 dmmv_wg = DMMV_WG_SIZE_LARGE;
             }
         }
+    }
+
+    if (ctx->device->architecture == AMD_RDNA2 && a_type == GGML_TYPE_Q6_K && m >= 32768 && k >= 1024 && num_cols == 1) {
+        dmmv_wg = DMMV_WG_SIZE_LARGE;
     }
 
     if (b_type == GGML_TYPE_Q8_1) {
