@@ -17305,8 +17305,8 @@ static ggml_status ggml_backend_vk_graph_compute(ggml_backend_t backend, ggml_cg
             }
         }
 
-        // Signal the almost_ready fence when the graph is mostly complete (< 40% remaining)
-        bool almost_ready = (cgraph->n_nodes - i) < (cgraph->n_nodes * 2) / 5;
+        // Signal the almost_ready fence when the graph is mostly complete (< 20% remaining)
+        bool almost_ready = (cgraph->n_nodes - i) < cgraph->n_nodes / 5;
         bool submit = (submitted_nodes >= ctx->device->max_nodes_per_submit) ||
                       (flops_per_submit != 0 && batch_flops >= flops_per_submit) ||
                       (i + ctx->num_additional_fused_ops >= last_node) ||
