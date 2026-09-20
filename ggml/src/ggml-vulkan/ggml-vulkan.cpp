@@ -5664,8 +5664,8 @@ static void ggml_vk_load_shaders(vk_device& device, vk_pipeline requested) {
     ggml_vk_create_pipeline(device, device->pipeline_fill_f16, "fill_f16", fill_f16_len, fill_f16_data, "main", 1, sizeof(vk_op_push_constants), {512, 1, 1}, {}, 1);
 
 #define CREATE_GLU(name)  \
-    ggml_vk_create_pipeline(device, device->pipeline_ ## name [0], #name "_f32", name ## _f32_len, name ## _f32_data, "main", 3, sizeof(vk_op_glu_push_constants), {128, 1, 1}, {}, 1, true);   \
-    ggml_vk_create_pipeline(device, device->pipeline_ ## name [1], #name "_f16", name ## _f16_len, name ## _f16_data, "main", 3, sizeof(vk_op_glu_push_constants), {128, 1, 1}, {}, 1, true);
+    ggml_vk_create_pipeline(device, device->pipeline_ ## name [0], #name "_f32", name ## _f32_len, name ## _f32_data, "main", 3, sizeof(vk_op_glu_push_constants), {512, 1, 1}, {}, 1, true);   \
+    ggml_vk_create_pipeline(device, device->pipeline_ ## name [1], #name "_f16", name ## _f16_len, name ## _f16_data, "main", 3, sizeof(vk_op_glu_push_constants), {512, 1, 1}, {}, 1, true);
 
     CREATE_GLU(geglu)
     CREATE_GLU(reglu)
@@ -12173,15 +12173,7 @@ static void ggml_vk_op_f32(ggml_backend_vk_context * ctx, vk_context& subctx, co
             if (op == GGML_OP_CPY && !ggml_is_quantized(src0->type) && ggml_is_quantized(dst->type)) {
                 ne = CEIL_DIV(ne, ggml_blck_size(dst->type));
             }
-            if (op == GGML_OP_GLU) {
-                if (ne > 16384) {
-                    elements = { 128, 128, CEIL_DIV(ne, 16384) };
-                } else if (ne > 128) {
-                    elements = { 128, CEIL_DIV(ne, 128), 1 };
-                } else {
-                    elements = { ne, 1, 1 };
-                }
-            } else if (ne > 262144) {
+            if (ne > 262144) {
                 elements = { 512, 512, CEIL_DIV(ne, 262144) };
             } else if (ne > 512) {
                 elements = { 512, CEIL_DIV(ne, 512), 1 };
