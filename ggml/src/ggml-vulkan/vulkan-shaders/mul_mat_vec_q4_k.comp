@@ -47,38 +47,17 @@ void calc_superblock(const uint a_offset, const uint b_offset, const uint v_im, 
         const vec4 qs0_hi4 = vec4(unpack8(qs0_u32_hi4));
         const vec4 qs64_hi4 = vec4(unpack8(qs64_u32_hi4));
 
-        const FLOAT_TYPE q4_0  = qs0_lo4.x;
-        const FLOAT_TYPE q4_1  = qs0_lo4.y;
-        const FLOAT_TYPE q4_2  = qs0_lo4.z;
-        const FLOAT_TYPE q4_3  = qs0_lo4.w;
-        const FLOAT_TYPE q4_4  = qs0_hi4.x;
-        const FLOAT_TYPE q4_5  = qs0_hi4.y;
-        const FLOAT_TYPE q4_6  = qs0_hi4.z;
-        const FLOAT_TYPE q4_7  = qs0_hi4.w;
-        const FLOAT_TYPE q4_8  = qs64_lo4.x;
-        const FLOAT_TYPE q4_9  = qs64_lo4.y;
-        const FLOAT_TYPE q4_10 = qs64_lo4.z;
-        const FLOAT_TYPE q4_11 = qs64_lo4.w;
-        const FLOAT_TYPE q4_12 = qs64_hi4.x;
-        const FLOAT_TYPE q4_13 = qs64_hi4.y;
-        const FLOAT_TYPE q4_14 = qs64_hi4.z;
-        const FLOAT_TYPE q4_15 = qs64_hi4.w;
-
         [[unroll]] for (uint j = 0; j < NUM_COLS; ++j) {
             vec4 by10 =  vec4(data_b_v4[(j*p.batch_stride_b + b_offset + y1_idx) / 4    ]);
             vec4 by132 = vec4(data_b_v4[(j*p.batch_stride_b + b_offset + y1_idx) / 4 + 8]);
             vec4 by20 =  vec4(data_b_v4[(j*p.batch_stride_b + b_offset + y2_idx) / 4    ]);
             vec4 by232 = vec4(data_b_v4[(j*p.batch_stride_b + b_offset + y2_idx) / 4 + 8]);
 
-            const FLOAT_TYPE sx = fma(FLOAT_TYPE(by10.x),      q4_0,  fma(FLOAT_TYPE(by10.y),  q4_1,  fma(FLOAT_TYPE(by10.z),  q4_2,  FLOAT_TYPE(by10.w) *  q4_3)));
-            const FLOAT_TYPE sy = fma(FLOAT_TYPE(by132.x),     q4_4,  fma(FLOAT_TYPE(by132.y), q4_5,  fma(FLOAT_TYPE(by132.z), q4_6,  FLOAT_TYPE(by132.w) * q4_7)));
-            const FLOAT_TYPE sz = fma(FLOAT_TYPE(by20.x),      q4_8,  fma(FLOAT_TYPE(by20.y),  q4_9,  fma(FLOAT_TYPE(by20.z),  q4_10, FLOAT_TYPE(by20.w) *  q4_11)));
-            const FLOAT_TYPE sw = fma(FLOAT_TYPE(by232.x),     q4_12, fma(FLOAT_TYPE(by232.y), q4_13, fma(FLOAT_TYPE(by232.z), q4_14, FLOAT_TYPE(by232.w) * q4_15)));
-            const FLOAT_TYPE smin =
-                fma(FLOAT_TYPE(by10.x), sc2, fma(FLOAT_TYPE(by132.x), sc3, fma(FLOAT_TYPE(by20.x), sc6, fma(FLOAT_TYPE(by232.x), sc7,
-                fma(FLOAT_TYPE(by10.y), sc2, fma(FLOAT_TYPE(by132.y), sc3, fma(FLOAT_TYPE(by20.y), sc6, fma(FLOAT_TYPE(by232.y), sc7,
-                fma(FLOAT_TYPE(by10.z), sc2, fma(FLOAT_TYPE(by132.z), sc3, fma(FLOAT_TYPE(by20.z), sc6, fma(FLOAT_TYPE(by232.z), sc7,
-                fma(FLOAT_TYPE(by10.w), sc2, fma(FLOAT_TYPE(by132.w), sc3, fma(FLOAT_TYPE(by20.w), sc6,     FLOAT_TYPE(by232.w) * sc7)))))))))))))));
+            const FLOAT_TYPE sx = FLOAT_TYPE(dot(by10, qs0_lo4));
+            const FLOAT_TYPE sy = FLOAT_TYPE(dot(by132, qs0_hi4));
+            const FLOAT_TYPE sz = FLOAT_TYPE(dot(by20, qs64_lo4));
+            const FLOAT_TYPE sw = FLOAT_TYPE(dot(by232, qs64_hi4));
+            const FLOAT_TYPE smin = FLOAT_TYPE(dot(by10, vec4(sc2)) + dot(by132, vec4(sc3)) + dot(by20, vec4(sc6)) + dot(by232, vec4(sc7)));
             temp[j][n] = fma(dm.x, fma(sx, sc0, fma(sy, sc1, fma(sz, sc4, sw * sc5))), fma(-dm.y, smin, temp[j][n]));
         }
     }
