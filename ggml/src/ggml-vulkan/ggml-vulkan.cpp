@@ -9425,11 +9425,6 @@ static bool ggml_vk_should_use_mmvq(const vk_device& device, uint32_t m, uint32_
             return true;
         }
     case VK_VENDOR_ID_AMD:
-        // Rembrandt decode is k=1024 GEMV. Integer-dot MMVQ is a win on FFN Q4_K
-        // once Q6_K (lm_head) is excluded above.
-        if (device->architecture == AMD_RDNA2 && n == 1 && k >= 1024) {
-            return true;
-        }
         if (k < 2048) {
             return false;
         }
