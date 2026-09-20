@@ -6,10 +6,20 @@
 
 layout(local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 
+shared FLOAT_TYPE sccache[8][BLOCK_SIZE/16][16];
+
 FLOAT_TYPE temp[NUM_COLS][NUM_ROWS];
 
 void calc_superblock(const uint a_offset, const uint b_offset, const uint itid, const uint ix, const uint ql_offset, const uint qh_offset, const uint s_offset, const uint y_offset, const uint i, const uint num_blocks_per_row, const uint first_row, const uint num_rows, const bool all_threads) {
     const uint y_idx = i * QUANT_K + y_offset;
+
+    [[unroll]] for (uint n = 0; n < NUM_ROWS; ++n) {
+        if (n < num_rows && (all_threads || i < num_blocks_per_row)) {
+            const uint ib0 = a_offset + (first_row+n)*num_blocks_per_row;
+            sccache[n][ix][itid] = FLOAT_TYPE(data_a[ib0 + i].scales[itid]);
+        }
+    }
+    barrier();
 
     if (!all_threads && i >= num_blocks_per_row) {
         return;
@@ -17,10 +27,6 @@ void calc_superblock(const uint a_offset, const uint b_offset, const uint itid, 
 
     [[unroll]] for (uint n = 0; n < num_rows; ++n) {
         const uint ib0 = a_offset + (first_row+n)*num_blocks_per_row;
-        const FLOAT_TYPE s0 = FLOAT_TYPE(data_a[ib0 + i].scales[s_offset]);
-        const FLOAT_TYPE s2 = FLOAT_TYPE(data_a[ib0 + i].scales[s_offset + 2]);
-        const FLOAT_TYPE s4 = FLOAT_TYPE(data_a[ib0 + i].scales[s_offset + 4]);
-        const FLOAT_TYPE s6 = FLOAT_TYPE(data_a[ib0 + i].scales[s_offset + 6]);
 
         const uint32_t ql0_u32 =  uint32_t(data_a_packed16[ib0 + i].ql[ql_offset / 2]) | (uint32_t(data_a_packed16[ib0 + i].ql[ql_offset / 2 + 1]) << 16);
         const uint32_t ql32_u32 = uint32_t(data_a_packed16[ib0 + i].ql[ql_offset / 2 + 16]) | (uint32_t(data_a_packed16[ib0 + i].ql[ql_offset / 2 + 17]) << 16);
@@ -54,7 +60,7 @@ void calc_superblock(const uint a_offset, const uint b_offset, const uint itid, 
             vec4 by64 = vec4(data_b_v4[(j*p.batch_stride_b + b_offset + y_idx) / 4 + 16]);
             vec4 by96 = vec4(data_b_v4[(j*p.batch_stride_b + b_offset + y_idx) / 4 + 24]);
 
-            temp[j][n] = fma(fma(FLOAT_TYPE(dot(by0, q0)), s0, fma(FLOAT_TYPE(dot(by32, q1)), s2, fma(FLOAT_TYPE(dot(by64, q2)), s4, FLOAT_TYPE(dot(by96, q3)) * s6))), d, temp[j][n]);
+            temp[j][n] = fma(fma(FLOAT_TYPE(dot(by0, q0)), sccache[n][ix][s_offset], fma(FLOAT_TYPE(dot(by32, q1)), sccache[n][ix][s_offset + 2], fma(FLOAT_TYPE(dot(by64, q2)), sccache[n][ix][s_offset + 4], FLOAT_TYPE(dot(by96, q3)) * sccache[n][ix][s_offset + 6]))), d, temp[j][n]);
         }
     }
 }
