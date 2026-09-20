@@ -9427,6 +9427,9 @@ static bool ggml_vk_should_use_mmvq(const vk_device& device, uint32_t m, uint32_
         if (k < 2048) {
             return false;
         }
+        if (device->architecture == AMD_RDNA2 && n == 1) {
+            return false;
+        }
 
         switch (src0_type) {
         case GGML_TYPE_Q8_0:
