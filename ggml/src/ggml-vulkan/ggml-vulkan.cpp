@@ -6486,7 +6486,6 @@ static vk_device ggml_vk_get_device(size_t idx) {
         memory_priority_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PRIORITY_FEATURES_EXT;
         memory_priority_features.memoryPriority = VK_FALSE;
         if (device->memory_priority) {
-            memory_priority_features.memoryPriority = VK_TRUE;
             last_struct->pNext = (VkBaseOutStructure *)&memory_priority_features;
             last_struct = (VkBaseOutStructure *)&memory_priority_features;
             device_extensions.push_back("VK_EXT_memory_priority");
