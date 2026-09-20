@@ -3738,7 +3738,7 @@ static vk_fa_tuning_params get_fa_tuning_params_scalar(const vk_device& device, 
 
     if (n_rows == 1) {
         result.block_rows = 1;
-        result.block_cols = 64;
+        result.block_cols = (device->architecture == AMD_RDNA2) ? 32u : 64u;
     } else {
         // row_split 1 means higher register use per row, so block size has to be adjusted
         if (result.row_split == 1) {
