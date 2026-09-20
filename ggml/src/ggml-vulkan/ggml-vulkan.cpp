@@ -7805,10 +7805,6 @@ static vk_pipeline ggml_vk_get_dequantize_mul_mat_vec(ggml_backend_vk_context * 
                 dmmv_wg = DMMV_WG_SIZE_LARGE;
             }
         }
-    } else if (ctx->device->vendor_id == VK_VENDOR_ID_AMD && ctx->device->architecture == AMD_RDNA2) {
-        if (a_type == GGML_TYPE_Q6_K && m >= 65536 && k >= 1024) {
-            dmmv_wg = DMMV_WG_SIZE_LARGE;
-        }
     }
 
     if (b_type == GGML_TYPE_Q8_1) {
@@ -7973,10 +7969,6 @@ static vk_pipeline ggml_vk_get_dequantize_mul_mat_vec_id(ggml_backend_vk_context
             if (m <= 8192 && k >= 1024) {
                 dmmv_wg = DMMV_WG_SIZE_LARGE;
             }
-        }
-    } else if (ctx->device->vendor_id == VK_VENDOR_ID_AMD && ctx->device->architecture == AMD_RDNA2) {
-        if (a_type == GGML_TYPE_Q6_K && m >= 65536 && k >= 1024) {
-            dmmv_wg = DMMV_WG_SIZE_LARGE;
         }
     }
 
