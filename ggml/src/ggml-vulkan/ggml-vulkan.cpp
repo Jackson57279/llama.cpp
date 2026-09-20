@@ -7814,8 +7814,6 @@ static vk_pipeline ggml_vk_get_dequantize_mul_mat_vec(ggml_backend_vk_context * 
                 dmmv_wg = DMMV_WG_SIZE_LARGE;
             }
         }
-    } else if (ctx->device->architecture == AMD_RDNA2 && a_type == GGML_TYPE_Q6_K && m >= 4096 && k >= 1024) {
-        dmmv_wg = DMMV_WG_SIZE_LARGE;
     }
 
     if (b_type == GGML_TYPE_Q8_1) {
