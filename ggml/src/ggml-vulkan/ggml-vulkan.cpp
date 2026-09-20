@@ -5189,7 +5189,7 @@ static void ggml_vk_load_shaders(vk_device& device, vk_pipeline requested) {
         rm_stdq_int = 2;
     }
     uint32_t rm_iq = 2 * rm_kq;
-    uint32_t rm_q6 = (device->architecture == AMD_RDNA2) ? 1u : rm_kq;
+    uint32_t rm_q6 = (device->architecture == AMD_RDNA2) ? 2u : rm_kq;
 
     const bool use_subgroups = device->subgroup_arithmetic;
     // Ensure a subgroup size >= 16 is available
