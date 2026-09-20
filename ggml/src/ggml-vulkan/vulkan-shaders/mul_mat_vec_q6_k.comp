@@ -28,15 +28,15 @@ void calc_superblock(const uint a_offset, const uint b_offset, const uint itid, 
     [[unroll]] for (uint n = 0; n < num_rows; ++n) {
         const uint ib0 = a_offset + (first_row+n)*num_blocks_per_row;
 
-        const uint32_t ql0_u32 = data_a_packed32[ib0 + i].ql[ql_offset / 4];
-        const uint32_t ql32_u32 = data_a_packed32[ib0 + i].ql[ql_offset / 4 + 16];
+        const uint32_t ql0_u32 =  uint32_t(data_a_packed16[ib0 + i].ql[ql_offset / 2]) | (uint32_t(data_a_packed16[ib0 + i].ql[ql_offset / 2 + 1]) << 16);
+        const uint32_t ql32_u32 = uint32_t(data_a_packed16[ib0 + i].ql[ql_offset / 2 + 16]) | (uint32_t(data_a_packed16[ib0 + i].ql[ql_offset / 2 + 17]) << 16);
 
         const uint32_t ql0_u32_lo4 = ql0_u32 & 0x0F0F0F0F;
         const uint32_t ql0_u32_hi4 = (ql0_u32 >> 4) & 0x0F0F0F0F;
         const uint32_t ql32_u32_lo4 = ql32_u32 & 0x0F0F0F0F;
         const uint32_t ql32_u32_hi4 = (ql32_u32 >> 4) & 0x0F0F0F0F;
 
-        const uint32_t qh_u32 = data_a_packed32[ib0 + i].qh[qh_offset / 4];
+        const uint32_t qh_u32 = uint32_t(data_a_packed16[ib0 + i].qh[qh_offset / 2]) | (uint32_t(data_a_packed16[ib0 + i].qh[qh_offset / 2 + 1]) << 16);
         const uint32_t qh0_u32 = (qh_u32 & 0x03030303) << 4;
         const uint32_t qh2_u32 = (qh_u32 & 0x0C0C0C0C) << 2;
         const uint32_t qh4_u32 = (qh_u32 & 0x30303030);
